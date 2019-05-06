@@ -1,7 +1,7 @@
 {
   "name": "flow-calc",
   "version": "1.0.0",
-  "description": "Express business logic or calculations as a serializable, composable dependency graph with asynchronous inputs.",
+  "description": "Run and serialize business logic and calculations using dependency graphs and reactive/flow programming.",
   "main": "./lib/index.js",
   "scripts": {
     "clean": "rimraf lib",
@@ -21,21 +21,21 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/flexdinesh/npm-module-boilerplate.git"
+    "url": "git+https://github.com/cpbtechnology/flow-calc"
   },
   "keywords": [
-    "boilerplate",
-    "npm",
-    "module",
+    "reactive",
+    "flow",
+    "spreadsheet",
     "node",
     "javascript"
   ],
   "author": "Eric Miller <github+public@patternleaf.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/flexdinesh/npm-module-boilerplate/issues"
+    "url": "https://github.com/cpbtechnology/flow-calc/issues"
   },
-  "homepage": "https://github.com/flexdinesh/npm-module-boilerplate#readme",
+  "homepage": "https://github.com/cpbtechnology/flow-calc#readme",
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-eslint": "^10.0.1",
