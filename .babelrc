@@ -1,0 +1,16 @@
+{
+  "env": {
+    "development": {
+      "presets": ["env"],
+      "plugins": [
+        "add-module-exports"
+      ]
+    },
+    "production": {
+      "presets": ["env", ["minify", { "evaluate": false, "mangle": false }]],
+      "plugins": [
+        "add-module-exports"
+      ]
+    }
+  }
+}
