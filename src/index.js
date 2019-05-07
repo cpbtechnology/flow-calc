@@ -67,13 +67,15 @@ class DGraph {
 		}
 
 		this.graphDefinition = graphDefinition
-		this.name = name || `unnamed DGraph ${nGraphs++}`
+		this.name = name || `Unnamed-DGraph-${nGraphs++}`
 		this._graph = null
 		this.isConstructed = Promise.resolve(false)
 		this.options = _.defaults({}, options, {
 			echoInputs: false,
 			depth: 0
 		})
+
+		this.normalizeInputDef = DGraph.normalizeInputDef
 
 		this._build()
 	}
@@ -84,23 +86,6 @@ class DGraph {
 			indent += '  '
 		}
 		console.log(indent, ...args)
-	}
-
-	normalizeInputDef (inputDef) {
-		let srcPaths = [], inputNames = []
-		if (_.isArray(inputDef)) {
-			srcPaths = _.clone(inputDef)
-			inputNames = _.clone(inputDef)
-		}
-		else if (_.isString(inputDef)) {
-			srcPaths = [inputDef]
-			inputNames = [inputDef]
-		}
-		else {
-			srcPaths = _.values(inputDef)
-			inputNames = _.keys(inputDef)
-		}
-		return _.zipObject(inputNames, srcPaths)
 	}
 
 	_preprocessGraphDef (graphDef) {
@@ -183,8 +168,21 @@ class DGraph {
 	}
 
 	run (inputs) {
+		const expectedInputNames = DGraph.collectExpectedInputNames(this.graphDefinition)
+		const actualInputNames = _.keys(inputs)
+		const missingInputs = []
+		for (let expectedInputName of expectedInputNames) {
+			if (!actualInputNames.includes(expectedInputName)) {
+				missingInputs.push(expectedInputName)
+			}
+		}
+
+		if (missingInputs.length) {
+			throw new Error(`Graph ${this.name} was not passed the following expected inputs: ${missingInputs.join(', ')}.`)
+		}
+
 		// this.log(`[${this.name}] running with inputs`, inputs)
-		
+
 		this.setInputs(inputs)
 		
 		let dispose
@@ -243,6 +241,35 @@ class DGraph {
 		}
 	}
 
+}
+
+DGraph.normalizeInputDef = (inputDef) => {
+	let srcPaths = [], inputNames = []
+	if (_.isArray(inputDef)) {
+		srcPaths = _.clone(inputDef)
+		inputNames = _.clone(inputDef)
+	}
+	else if (_.isString(inputDef)) {
+		srcPaths = [inputDef]
+		inputNames = [inputDef]
+	}
+	else {
+		srcPaths = _.values(inputDef)
+		inputNames = _.keys(inputDef)
+	}
+	return _.zipObject(inputNames, srcPaths)
+}
+
+DGraph.collectExpectedInputNames = (graphDef) => {
+	let result = []
+	for (let nodeDef of graphDef) {
+		if (nodeDef.inputs) {
+			const normalizedInputs = DGraph.normalizeInputDef(nodeDef.inputs)
+			const inputPaths = _.values(normalizedInputs).filter(value => _.isString(value) && value.startsWith('inputs.'))
+			result = result.concat(inputPaths.map(path => path.split('.')[1]))
+		}
+	}
+	return result
 }
 
 module.exports = DGraph

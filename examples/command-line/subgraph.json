@@ -1,0 +1,11 @@
+[
+    {
+        "name": "subgraphComputedValue",
+        "type": "transform",
+        "fn": "add",
+        "inputs": {
+            "a": "inputs.valueToInputToSubgraph",
+            "b": 20
+        }
+    }
+]

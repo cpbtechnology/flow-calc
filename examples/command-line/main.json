@@ -19,12 +19,17 @@
         ]
     },
     {
+        "name": "valueToInputToSubgraph",
+        "type": "static",
+        "value": 8
+    },
+    {
         "name": "multiplyExample",
         "type": "transform",
         "fn": "mult",
         "inputs": {
             "amt": "inputs.numberValue",
-            "factor": 3
+            "factor": "subgraph.subgraphComputedValue"
         }
     }
 ]
