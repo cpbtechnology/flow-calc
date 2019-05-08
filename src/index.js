@@ -103,7 +103,7 @@ class DGraph {
 				aliases.forEach(a => def.push({ name: a, type: 'alias', mirror: dNode.name }))
 			}
 		}
-
+		
 		// create an inputs node
 		def.push({ name: 'inputs', type: 'inputs', value: {} })
 
@@ -149,6 +149,9 @@ class DGraph {
 
 		const dNodes = graphDef.map(nodeDef => {
 			const DNodeClass = dNodeClasses[nodeDef.type]
+			if (!DNodeClass) {
+				throw new Error(`Unknown node type: ${nodeDef.type}.`)
+			}
 			return new DNodeClass(this, nodeDef)
 		})
 
@@ -168,7 +171,7 @@ class DGraph {
 	}
 
 	run (inputs) {
-		const expectedInputNames = DGraph.collectExpectedInputNames(this.graphDefinition)
+		const expectedInputNames = _.uniq(DGraph.collectExpectedInputNames(this.graphDefinition))
 		const actualInputNames = _.keys(inputs)
 		const missingInputs = []
 		for (let expectedInputName of expectedInputNames) {
@@ -178,7 +181,7 @@ class DGraph {
 		}
 
 		if (missingInputs.length) {
-			throw new Error(`Graph ${this.name} was not passed the following expected inputs: ${missingInputs.join(', ')}.`)
+			throw new Error(`Graph ${this.name} was not passed the following expected inputs: ${_.uniq(missingInputs).join(', ')}.`)
 		}
 
 		// this.log(`[${this.name}] running with inputs`, inputs)
@@ -260,13 +263,26 @@ DGraph.normalizeInputDef = (inputDef) => {
 	return _.zipObject(inputNames, srcPaths)
 }
 
+/**
+ * Traverse nodes and if any node depends on the `inputs` node,
+ * collect the top-level property name required.
+ */
 DGraph.collectExpectedInputNames = (graphDef) => {
+	return DGraph.collectExpectedInputPaths(graphDef).map(path => path.split('.')[0])
+}
+
+/**
+ * Traverse nodes and if any node depends on the `inputs` node,
+ * collect the full path of that dependency, except for `inputs.` at the 
+ * beginning of the path (that part is assumed).
+ */
+DGraph.collectExpectedInputPaths = (graphDef) => {
 	let result = []
 	for (let nodeDef of graphDef) {
-		if (nodeDef.inputs) {
-			const normalizedInputs = DGraph.normalizeInputDef(nodeDef.inputs)
+		if (nodeDef.inputs || nodeDef.mirror) {
+			const normalizedInputs = DGraph.normalizeInputDef(nodeDef.inputs || nodeDef.mirror)
 			const inputPaths = _.values(normalizedInputs).filter(value => _.isString(value) && value.startsWith('inputs.'))
-			result = result.concat(inputPaths.map(path => path.split('.')[1]))
+			result = result.concat(inputPaths.map(path => path.split('.').slice(1).join('.')))
 		}
 	}
 	return result

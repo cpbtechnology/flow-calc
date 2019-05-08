@@ -21,11 +21,11 @@ function tryToLoad(path) {
 			try {
 				result = require(`${prefix}/${path}`)
 			}
-			catch (e) { }
+			catch (e) {}
 		}
 	}
 	if (!result) {
-		throw new Error(`Could not find ${path}.`)
+		throw new Error(`Could not load ${path}. There may be a JSON syntax error.`)
 	}
 	return result
 }
@@ -56,12 +56,20 @@ let fullGraphDef = [
 Object.keys(graphDefs).filter(name => name !== mainGraphName).forEach(subgraphName => {
 	const graphDef = graphDefs[subgraphName]
 	const inputNames = DGraph.collectExpectedInputNames(graphDef)
-	fullGraphDef.push({ 
+	const subgraphDef = { 
 		name: subgraphName, 
 		type: 'graph', 
 		graphDef,
-		inputs: mainGraph.map(node => node.name).filter(name => inputNames.includes(name))
-	})
+		inputs: mainGraph.map(node => node.name).filter(name => {
+			// pass-through inputs
+			if (name.startsWith('inputs.')) {
+				name = name.slice('inputs.'.length)
+			}
+			console.log(`is ${name} included in`, inputNames)
+			return inputNames.includes(name) 
+		})
+	}
+	fullGraphDef.push(subgraphDef)
 })
 
 const inputs = tryToLoad(args['inputs'])

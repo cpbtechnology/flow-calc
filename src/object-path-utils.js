@@ -80,7 +80,7 @@ module.exports = {
 			paths = paths.filter(filterFn)
 		}
 		paths.forEach(p => {
-			result[p] = getValueAtPath(obj, p)
+			result[p] = module.exports.getValueAtPath(obj, p)
 		})
 		return result
 	},
@@ -95,7 +95,7 @@ module.exports = {
 		let result = {}
 		_.forOwn(obj, (v, k) => {
 			if (!filterFn || filterFn(k)) {
-				pathValueToObject(k, v, result)
+				module.exports.pathValueToObject(k, v, result)
 			}
 		})
 		return result
@@ -126,14 +126,14 @@ module.exports = {
 				result = nextIsArray ? [] : {}
 			} else if (bits.length) {
 				// if the container already exists, don't do anything
-				let existing = getValueAtPath(result, pathSoFar.join('.'))
+				let existing = module.exports.getValueAtPath(result, pathSoFar.join('.'))
 				existing = existing && nextIsArray ? _.isArray(existing) : _.isObject(existing)
-				if (!existing) {
+				if (!existing && pathSoFar.length) {
 					// otherwise, create it
-					setValueAtPath(result, pathSoFar.join('.'), nextIsArray ? [] : {})
+					module.exports.setValueAtPath(result, pathSoFar.join('.'), nextIsArray ? [] : {})
 				}
 			} else {
-				setValueAtPath(result, pathSoFar.join('.'), value)
+				module.exports.setValueAtPath(result, pathSoFar.join('.'), value)
 				done = true
 			}
 			if (!done) {
