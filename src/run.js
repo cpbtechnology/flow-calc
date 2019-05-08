@@ -1,16 +1,16 @@
 const DGraph = require('./index')
 const yargs = require('yargs')
 
-const args = yargs.option('graph-definition', {
+const args = yargs.option('graph-definitions', {
 	alias: 'g',
 	array: true,
-	describe: 'Paths to json files describing your graph. The top-level graph should be called `main.json`. Other graph definitions will be appended as `graph` nodes and their filenames will be used as the node names.'
+	describe: 'Paths to json files describing your graph. The first graph in this list will be treated as the top-level graph. Other graph definitions will be appended as `graph` nodes and their filenames will be used as the node names. Currently only subgraphs one level deep are supported.'
 }).option('inputs', {
 	alias: 'i',
-	describe: 'Path to json file providing inputs to run against the graph definition.'
+	describe: 'Path to json file defining a plain object as input to the graph definition.'
 }).demandOption(
-	['graph-definition', 'inputs'], 
-	'Please provide both graph-definition and inputs.'
+	['graph-definitions', 'inputs'], 
+	'Please provide both graph-definitions and inputs.'
 ).help().argv
 
 function tryToLoad(path) {
@@ -36,22 +36,18 @@ function getFilename (path) {
 	return path.split('/').pop().split('.').slice(0, -1).join('.')
 }
 
-args['graph-definition'].forEach(path => {
+let mainGraph
+args['graph-definitions'].forEach((path, i) => {
 	const graphDef = tryToLoad(path)
 	const fileName = getFilename(path)
 	if (Object.values(graphDef).includes(fileName)) {
 		throw new Error(`Multiple graph definitions found named ${fileName}.`)
 	}
 	graphDefs[fileName] = graphDef
+	if (i === 0) {
+		mainGraph = graphDef
+	}
 })
-
-let mainGraph
-if (!Object.keys(graphDefs).includes('main')) {
-	throw new Error('At least one graph definition must be named `main`. It will be treated as the top-level graph.')
-}
-else {
-	mainGraph = graphDefs.main
-}
 
 let fullGraphDef = [
 	...mainGraph
