@@ -6,9 +6,9 @@ From the flow-calc root directory,
 node ./src/run.js -g ./examples/command-line/main.json ./examples/command-line/subgraph.json -i ./examples/command-line/inputs.json
 ```
 
-Use `--graph-definintion` or `-g` to pass the paths to json files of graphs and subgraphs. Use `--inputs` or `-i` to pass a path to a single file containint the inputs to run on the graph.
+Use `--graph-definintions` or `-g` to pass the paths to json files of graphs and subgraphs. Use `--inputs` or `-i` to pass a path to a single file containint the inputs to run on the graph.
 
-The top level graph must be called `main.json`. Subgraphs will be copied into `graph` nodes named after their filename. In the above case, a graph node named `subgraph` will be created using the graph definition contained in `subgraph.json`.
+The first argument to `--graph-definitions` will be the top level graph. Remaining arguments will be copied into the top-level graph as `graph` nodes named after their filename. In the above case, a graph node named `subgraph` will be created using the graph definition contained in `subgraph.json`. Currently only subgraphs one level deep are supported.
 
 Output of above:
 ```
