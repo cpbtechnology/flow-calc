@@ -1,5 +1,6 @@
 const { observable, autorun, toJS } = require('mobx')
 const graphlib = require('graphlib')
+const { flattenObject } = require('./object-path-utils')
 const _ = require('lodash')
 const dNodeClasses = require('./d-nodes')
 
@@ -72,10 +73,14 @@ class DGraph {
 		this.isConstructed = Promise.resolve(false)
 		this.options = _.defaults({}, options, {
 			echoInputs: false,
+			echoTemplates: false,
+			echoIntermediates: false,
+			logUndefinedPaths: false,
 			depth: 0
 		})
 
-		this.normalizeInputDef = DGraph.normalizeInputDef
+		this.normalizePathDef = DGraph.normalizePathDef
+		this.srcFromPath = DGraph.srcFromPath
 
 		this._build()
 	}
@@ -94,42 +99,50 @@ class DGraph {
 		let def = _.cloneDeep(graphDef)
 		
 		// populate alias definitions if any
-		for (let dNode of def) {
-			let aliases = dNode.aliases
+		for (let nodeDef of def) {
+			let aliases = nodeDef.aliases
 			if (aliases) {
 				if (!_.isArray(aliases)) {
 					aliases = [aliases]
 				}
-				aliases.forEach(a => def.push({ name: a, type: 'alias', mirror: dNode.name }))
+				aliases.forEach(a => def.push({ name: a, type: 'alias', mirror: nodeDef.name }))
 			}
 		}
 		
 		// create an inputs node
 		def.push({ name: 'inputs', type: 'inputs', value: {} })
 
-		// for nodes with inputs, work out if there are any
-		// literals in the def. if so, create new static nodes for 
-		// those values.
+		// for nodes with inputs or params, work out if there are any literals in the def.
+		// if so, create new static nodes for those values.
 		const nodeNames = def.map(n => n.name)
-		const nodesWithInputs = def.filter(n => !!n.inputs)
-		nodesWithInputs.forEach(n => {
-			const normalizedInputDef = this.normalizeInputDef(n.inputs)
-			const keys = _.keys(normalizedInputDef)
-			keys.forEach(key => {
-				const value = normalizedInputDef[key]
-				const valueIsString = _.isString(value)
-				let possibleNodeName = valueIsString ? value : ''
-				if (valueIsString) {
-					possibleNodeName = value.includes('.') ? value.split('.')[0] : value
+		const literalNodes = []
+		for (let nodeDef of def) {
+			const pathPropertyNames = dNodeClasses[nodeDef.type].getNodeDefPathPropertyNames()
+			for (let pathPropertyName of pathPropertyNames) {
+				const normalizedPathDefs = this.normalizePathDef(nodeDef[pathPropertyName])
+				const keys = _.keys(normalizedPathDefs)
+				for (let key of keys) {
+					const pathOrValue = normalizedPathDefs[key]
+					const pathOrValueIsString = _.isString(pathOrValue)
+					let possibleNodeName = pathOrValueIsString ? pathOrValue : ''
+					if (pathOrValueIsString) {
+						// if it's a string, it might be a node name.
+						possibleNodeName = possibleNodeName.includes('.') ? possibleNodeName.split('.')[0] : possibleNodeName
+					}
+					if (!pathOrValueIsString || !nodeNames.includes(possibleNodeName)) {
+						if (this.options.logLiterals) {
+							this.log(`Note: '${this.name}' is interpreting '${pathOrValue}' as a literal at '${nodeDef.name}.${key}'.`)
+						}
+						const newNodeName = `#literal#${nodeDef.name}#${key}`
+						literalNodes.push({ name: newNodeName, type: 'static', value: pathOrValue })
+						normalizedPathDefs[key] = newNodeName
+					}
 				}
-				if (!valueIsString || !nodeNames.includes(possibleNodeName)) {
-					const newNodeName = `#${n.name}#input-alias#${key}`
-					def.push({ name: newNodeName, type: 'static', value })
-					normalizedInputDef[key] = newNodeName
-				}
-			})
-			n.inputs = normalizedInputDef
-		})
+				nodeDef[pathPropertyName] = normalizedPathDefs
+			}
+		}
+
+		def = def.concat(literalNodes)
 
 		return def
 	}
@@ -170,6 +183,40 @@ class DGraph {
 		resolveGraphIsConstructed()
 	}
 
+	getUndefinedPaths (obj = null) {
+		const fn = obj => {
+			const flattened = flattenObject(obj)
+			return _.keys(flattened).filter(k => _.isUndefined(flattened[k]) || _.isNaN(flattened[k]))
+		}
+		return obj ? fn(obj) : fn(this.getState())
+	}
+
+	shouldIncludeNodeValue (dNode) {
+		let result = !name.startsWith('#') && (!(dNode instanceof dNodeClasses.inputs) || this.options.echoInputs)
+		result = result && dNode.echoTo
+		return result
+	}
+
+	getState () {
+		const nodeValues = {}
+		try {
+			this._graph.nodes().forEach(nodeId => {
+				const dNode = this._graph.node(nodeId)
+				const name = dNode.name
+				let value = dNode.value
+				if (dNode.isVisibleInGraphState) {
+					nodeValues[name] = toJS(value)
+				}
+			})
+		}
+		catch (error) {
+			this.log(`Error caught reading nodes from [${this.name}]. ${error}.`)
+			this.log(error.stack)
+			throw error
+		}
+		return nodeValues
+	}
+
 	run (inputs) {
 		const expectedInputNames = _.uniq(DGraph.collectExpectedInputNames(this.graphDefinition))
 		const actualInputNames = _.keys(inputs)
@@ -184,32 +231,30 @@ class DGraph {
 			throw new Error(`Graph ${this.name} was not passed the following expected inputs: ${_.uniq(missingInputs).join(', ')}.`)
 		}
 
-		// this.log(`[${this.name}] running with inputs`, inputs)
-
 		this.setInputs(inputs)
 		
 		let dispose
 		return new Promise((resolve, reject) => {
 			dispose = autorun(() => {
-				const nodeValues = {}
 				try {
-					this._graph.nodes().forEach(nodeId => {
-						const dNode = this._graph.node(nodeId)
-						const name = dNode.name
-						let value = dNode.value
-						if (!name.startsWith('#') && (!name.startsWith('inputs.') || this.options.echoInputs)) {
-							nodeValues[name] = toJS(value)
-						}
-					})
-					if (!_.values(nodeValues).some(_.isUndefined)) {
-						resolve(nodeValues)
+					const state = this.getState()
+					const undefinedPaths = this.getUndefinedPaths(state)
+
+					if (undefinedPaths.length === 0) {
+						resolve(state)
 						if (dispose) {
 							dispose()
 						}
 					}
+					else {
+						if (this.options.logUndefinedPaths) {
+							this.log(`Undefined paths in '${this.name}'`, undefinedPaths)
+						}
+					}
 				}
 				catch (error) {
-					this.log(`Error caught reading nodes from [${this.name}] ${error}.`)
+					this.log(`Error caught reading nodes from [${this.name}]. ${error}.`)
+					this.log(error.stack)
 					reject(error)
 					if (dispose) {
 						if (dispose) {
@@ -246,21 +291,56 @@ class DGraph {
 
 }
 
-DGraph.normalizeInputDef = (inputDef) => {
-	let srcPaths = [], inputNames = []
-	if (_.isArray(inputDef)) {
-		srcPaths = _.clone(inputDef)
-		inputNames = _.clone(inputDef)
+/**
+ * Returns a pair with the nodeId split 
+ * out from the rest of the path: 
+ * 
+ * { 
+ *   nodeId: <node id>,
+ *   valuePath: <rest of the path, if any>
+ * }
+ */
+DGraph.srcFromPath = (srcPath) => {
+	const bits = srcPath.split('.')
+	let result = {
+		nodeId: srcPath,
+		valuePath: undefined
 	}
-	else if (_.isString(inputDef)) {
-		srcPaths = [inputDef]
-		inputNames = [inputDef]
+	if (bits.length > 1) {
+		result.nodeId = bits[0]
+		result.valuePath = bits.slice(1).join('.')
+	}
+	return result
+}
+
+/**
+ * Accept a few ways to specify paths to other values
+ * in the graph. In all cases return an object with keys
+ * that are property names and values that are paths.
+ */
+DGraph.normalizePathDef = (pathDef) => {
+	let paths = [], propNames = []
+
+	// make keys not look like paths.
+	const mangleKeyPath = p => p//.replace('.', '$')
+
+	if (_.isArray(pathDef)) {
+		// keys and values are identical. example use case: referring to 
+		// another simple (non-nested) node value in this graph.
+		propNames = _.clone(pathDef.map(mangleKeyPath))
+		paths = _.clone(pathDef)
+	}
+	else if (_.isString(pathDef)) {
+		// just like array situation but for a single key/value pair
+		propNames = [mangleKeyPath(pathDef)]
+		paths = [pathDef]
 	}
 	else {
-		srcPaths = _.values(inputDef)
-		inputNames = _.keys(inputDef)
+		// typical case: prop names already set; just clone 'em.
+		propNames = _.keys(pathDef)
+		paths = _.values(pathDef)
 	}
-	return _.zipObject(inputNames, srcPaths)
+	return _.zipObject(propNames, paths)
 }
 
 /**
@@ -279,13 +359,15 @@ DGraph.collectExpectedInputNames = (graphDef) => {
 DGraph.collectExpectedInputPaths = (graphDef) => {
 	let result = []
 	for (let nodeDef of graphDef) {
-		if (nodeDef.inputs || nodeDef.mirror) {
-			const normalizedInputs = DGraph.normalizeInputDef(nodeDef.inputs || nodeDef.mirror)
-			const inputPaths = _.values(normalizedInputs).filter(value => _.isString(value) && value.startsWith('inputs.'))
+		const pathPropertyNames = dNodeClasses[nodeDef.type].getNodeDefPathPropertyNames()
+		pathPropertyNames.forEach(propName => {
+			const normalizedPaths = DGraph.normalizePathDef(nodeDef[propName])
+			const inputPaths = _.values(normalizedPaths).filter(value => _.isString(value) && value.startsWith('inputs.'))
 			result = result.concat(inputPaths.map(path => path.split('.').slice(1).join('.')))
-		}
+		})
 	}
 	return result
 }
+
 
 module.exports = DGraph

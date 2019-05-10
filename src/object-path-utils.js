@@ -33,6 +33,9 @@ module.exports = {
 		return v[p]
 	},
 
+	pathDotEscapeSeq: '_$dot$_',
+	pathDotUnescapeRegex: /_\$dot\$_/g,
+
 	/**
 	 * Traverses passed object depth-first and collects all object's
 	 * own paths recursively.
@@ -45,14 +48,15 @@ module.exports = {
 		let result = []
 		if (_.isArray(obj)) {
 			_.forEach(obj, (v, i) => {
-				result = result.concat(collectObjectPaths(v, i.toString()))
+				result = result.concat(module.exports.collectObjectPaths(v, i.toString()))
 			})
 		} else if (_.isObject(obj)) {
 			_.forOwn(obj, (v, k) => {
+				const escapedKey = k.replace(/\./g, module.exports.pathDotEscapeSeq)
 				if (_.isObject(v) || _.isArray(v)) {
-					result = result.concat(collectObjectPaths(v, k))
+					result = result.concat(module.exports.collectObjectPaths(v, escapedKey))
 				} else {
-					result.push(k)
+					result.push(escapedKey)
 				}
 			})
 		} else {
@@ -63,11 +67,28 @@ module.exports = {
 		return parent ? result.map(p => `${parent}.${p}`) : result
 	},
 
+	escapeObjectPaths: function escapeObjectPaths(obj) {
+		let result = obj
+		if (_.isObject(obj) && !_.isArray(obj)) {
+			result = {}
+			_.forOwn(obj, (v, k) => {
+				const escapedKey = k.replace(/\./g, module.exports.pathDotEscapeSeq)
+				result[escapedKey] = v
+			})
+		}
+		else if (_.isArray(obj)) {
+			result = obj.map(entry => escapeObjectPaths(entry))
+		}
+		return result
+	},
+
 	/**
-	 * Flattens an deep object tree (arrays and objects) into a single
+	 * Flattens a deep object tree (arrays and objects) into a single
 	 * non-tree object whose keys are the paths of nested properties
 	 * with matching values.
-	 *
+	 * 
+	 * Properties with dots in their names should be preserved.
+	 * 
 	 * Not super-speedy. :)
 	 *
 	 * @param {Object} obj Object to flatten.
@@ -75,12 +96,14 @@ module.exports = {
 	 */
 	flattenObject: function flattenObject(obj, filterFn) {
 		let result = {}
-		let paths = collectObjectPaths(obj)
+		const unescapePath = p => p.replace(module.exports.pathDotUnescapeRegex, '.')
+		const escapedObject = module.exports.escapeObjectPaths(obj)
+		let escapedPaths = module.exports.collectObjectPaths(escapedObject)
 		if (filterFn) {
-			paths = paths.filter(filterFn)
+			escapedPaths = escapedPaths.filter(p => filterFn(unescapePath(p)))
 		}
-		paths.forEach(p => {
-			result[p] = module.exports.getValueAtPath(obj, p)
+		escapedPaths.forEach(p => {
+			result[unescapePath(p)] = module.exports.getValueAtPath(escapedObject, p)
 		})
 		return result
 	},
