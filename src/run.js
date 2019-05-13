@@ -104,6 +104,7 @@ const options = {
 	echoTemplates: !!args['echo-templates']
 }
 
+// console.log(fullGraphDef.filter(d => d.type === 'graph'))
 const g = new DGraph(fullGraphDef, mainGraphName, options)
 g.run(inputs).then(results => {
 	console.log(` --- graph fulfilled --- `)

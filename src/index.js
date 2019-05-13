@@ -119,26 +119,29 @@ class DGraph {
 		for (let nodeDef of def) {
 			const pathPropertyNames = dNodeClasses[nodeDef.type].getNodeDefPathPropertyNames()
 			for (let pathPropertyName of pathPropertyNames) {
-				const normalizedPathDefs = this.normalizePathDef(nodeDef[pathPropertyName])
-				const keys = _.keys(normalizedPathDefs)
-				for (let key of keys) {
-					const pathOrValue = normalizedPathDefs[key]
-					const pathOrValueIsString = _.isString(pathOrValue)
-					let possibleNodeName = pathOrValueIsString ? pathOrValue : ''
-					if (pathOrValueIsString) {
-						// if it's a string, it might be a node name.
-						possibleNodeName = possibleNodeName.includes('.') ? possibleNodeName.split('.')[0] : possibleNodeName
-					}
-					if (!pathOrValueIsString || !nodeNames.includes(possibleNodeName)) {
-						if (this.options.logLiterals) {
-							this.log(`Note: '${this.name}' is interpreting '${pathOrValue}' as a literal at '${nodeDef.name}.${key}'.`)
+				const pathPropertyValue = nodeDef[pathPropertyName]
+				if (pathPropertyValue) {
+					const normalizedPathDefs = this.normalizePathDef(pathPropertyValue)
+					const keys = _.keys(normalizedPathDefs)
+					for (let key of keys) {
+						const pathOrValue = normalizedPathDefs[key]
+						const pathOrValueIsString = _.isString(pathOrValue)
+						let possibleNodeName = pathOrValueIsString ? pathOrValue : ''
+						if (pathOrValueIsString) {
+							// if it's a string, it might be a node name.
+							possibleNodeName = possibleNodeName.includes('.') ? possibleNodeName.split('.')[0] : possibleNodeName
 						}
-						const newNodeName = `#literal#${nodeDef.name}#${key}`
-						literalNodes.push({ name: newNodeName, type: 'static', value: pathOrValue })
-						normalizedPathDefs[key] = newNodeName
+						if (!pathOrValueIsString || !nodeNames.includes(possibleNodeName)) {
+							if (this.options.logLiterals) {
+								this.log(`Note: '${this.name}' is interpreting '${pathOrValue}' as a literal at '${nodeDef.name}.${key}'.`)
+							}
+							const newNodeName = `#literal#${nodeDef.name}#${key}`
+							literalNodes.push({ name: newNodeName, type: 'static', value: pathOrValue })
+							normalizedPathDefs[key] = newNodeName
+						}
 					}
+					nodeDef[pathPropertyName] = normalizedPathDefs
 				}
-				nodeDef[pathPropertyName] = normalizedPathDefs
 			}
 		}
 
@@ -173,7 +176,13 @@ class DGraph {
 			this._graph.setNode(dNode.name, dNode)
 		}
 
-		// todo: wire up graph edges ... not that we're using them at the moment.
+		// TODO: this seems not to be doing quite the right thing yet.
+		for (let dNode of dNodes) {
+			const dependentNodeIds = _.uniq(DGraph.collectDependentNodeIds(dNode))
+			for (let nodeId of dependentNodeIds) {
+				this._graph.setEdge(dNode.name, nodeId)
+			}
+		}
 
 		this.resolutionError = null
 		this.isSettled = observable.box(false)
@@ -184,11 +193,11 @@ class DGraph {
 	}
 
 	getUndefinedPaths (obj = null) {
-		const fn = obj => {
+		const collectUndefinedPathsInObject = obj => {
 			const flattened = flattenObject(obj)
 			return _.keys(flattened).filter(k => _.isUndefined(flattened[k]) || _.isNaN(flattened[k]))
 		}
-		return obj ? fn(obj) : fn(this.getState())
+		return obj ? collectUndefinedPathsInObject(obj) : collectUndefinedPathsInObject(this.getState())
 	}
 
 	shouldIncludeNodeValue (dNode) {
@@ -237,7 +246,11 @@ class DGraph {
 		return new Promise((resolve, reject) => {
 			dispose = autorun(() => {
 				try {
+					
+					// getState tracks in the mobx sense.
 					const state = this.getState()
+
+					// is anything undefined?
 					const undefinedPaths = this.getUndefinedPaths(state)
 
 					if (undefinedPaths.length === 0) {
@@ -248,6 +261,9 @@ class DGraph {
 					}
 					else {
 						if (this.options.logUndefinedPaths) {
+							// TODO: sort these according to dependencies.
+							// const sortedNodeIds = graphlib.alg.topsort(this._graph)
+							// console.log({ sorted: sortedNodeIds.map(id => ({ id, predecessors: this._graph.predecessors(id).join(', ') })) })
 							this.log(`Undefined paths in '${this.name}'`, undefinedPaths)
 						}
 					}
@@ -277,6 +293,10 @@ class DGraph {
 	setInputs (inputs) {
 		const dNode = this._graph.node('inputs')
 		for (const k in inputs) {
+			const existingNode = this._graph.node(k)
+			if (existingNode) {
+				throw new Error(`Input name '${k}' conflicts with existing node '${k}'.`)
+			}
 			const value = inputs[k]
 			if (value && _.isFunction(value.then)) {
 				value.then(result => {
@@ -366,6 +386,24 @@ DGraph.collectExpectedInputPaths = (graphDef) => {
 			result = result.concat(inputPaths.map(path => path.split('.').slice(1).join('.')))
 		})
 	}
+	return result
+}
+
+/**
+ * Collect names of nodes that this node refers to; ie, that it depends upon.
+ * 
+ * TODO: possibly not yet working correctly.
+ */
+DGraph.collectDependentNodeIds = (dNode) => {
+	let result = []
+	const pathPropertyNames = dNodeClasses[dNode.type].getNodeDefPathPropertyNames()
+	for (let propName of pathPropertyNames) {
+		const normalizedPaths = DGraph.normalizePathDef(dNode.originalNodeDef[propName])
+		const pairs = _.values(normalizedPaths).map(DGraph.srcFromPath)
+		result = result.concat(pairs.map(p => p.nodeId))
+	}
+	result = _.uniq(result)
+	// console.log(`dependent node ids of ${dNode.name}`, result)
 	return result
 }
 

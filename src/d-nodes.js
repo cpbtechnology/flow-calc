@@ -28,9 +28,17 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 			const pathAfterArray = matches[2] ? matches[2].substring(1) : ''
 			
 			// if pathToArray is empty, the obj itself is the array
-			const array = pathToArray.length ? getValueAtPath(obj, pathToArray) : obj
+			let array = pathToArray.length ? getValueAtPath(obj, pathToArray) : obj
 
+			// TODO: not sure why/where/how an object with prop '*' is being created. work this out. 
+			if (_.isObject(array) && _.isArray(array['*'])) {
+				array = array['*']
+			}
+			
 			if (!_.isArray(array)) {
+				// console.log('---')
+				// console.log(array, array)
+				// console.log('---')
 				throw new Error(`Value at '${pathToArray}' is not an array.`)
 			}
 			else {
@@ -72,7 +80,6 @@ class DNode {
 		this.dGraph.log(...args)
 	}
 
-	
 
 	getGraphValueAt (srcPath) {
 		let nodeId, valuePath
@@ -97,15 +104,19 @@ class DNode {
 		
 		let result = !_.isUndefined(nodeValue) ? toJS(nodeValue) : undefined
 
-		if (result && !_.isUndefined(valuePath)) {
-			result = getValueAtPathWithArraySupport(nodeValue, valuePath)
+		if (!_.isUndefined(result) && !_.isUndefined(valuePath)) {
+			result = getValueAtPathWithArraySupport(result, valuePath)
 		}
 
 		return result
 	}
 
-	get type () {
+	get className () {
 		return this.constructor.name
+	}
+
+	get type () {
+		return this.originalNodeDef.type
 	}
 
 	get isVisibleInGraphState () {
@@ -389,6 +400,9 @@ class GraphDNode extends DNode {
 		let dispose
 		dispose = autorun(() => {
 			let args = this.getInputs()
+			if (this.name.includes('discounts')) {
+				console.log(`${this.name} args`, args)
+			}
 			const undefinedPaths = this.dGraph.getUndefinedPaths(args)
 			if (undefinedPaths.length === 0) {
 				this.subgraph.run(args).then(result => {
@@ -473,6 +487,11 @@ class GraphDNode extends DNode {
 		result = result && (!this.isTemplate || this.dGraph.options.echoTemplates)
 		return result
 	}
+
+	static getNodeDefPathPropertyNames () {
+		return ['inputs']
+	}
+
 }
 
 decorate(GraphDNode, { 
