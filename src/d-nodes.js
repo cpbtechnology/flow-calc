@@ -37,7 +37,7 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 			
 			if (!_.isArray(array)) {
 				// console.log('---')
-				// console.log(array, array)
+				// console.log({ path, pathToArray, obj, array })
 				// console.log('---')
 				throw new Error(`Value at '${pathToArray}' is not an array.`)
 			}
@@ -247,6 +247,9 @@ class TransformDNode extends DNode {
 	constructor (dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.fn = transformFns[nodeDef.fn]
+		if (!nodeDef.params) {
+			throw new Error(`No \`params\` defined on transform node ${nodeDef.name}.`)
+		}
 		this.paramSrcPaths = dGraph.normalizePathDef(nodeDef.params)
 	}
 
@@ -371,6 +374,7 @@ class GraphDNode extends DNode {
 		this.subgraph = new DGraph(
 			graphDef, 
 			`${this.dGraph.name}.${this.name}`, 
+			this.dGraph,
 			{ 
 				...this.dGraph.options,
 				depth: this.dGraph.options.depth + 1 
@@ -383,14 +387,13 @@ class GraphDNode extends DNode {
 					this._value = resultValue
 					resolve(this._value)
 				})
-				
 			}
 			this.rejectNode = reject
 		}))
 
 		this._value = undefined
 
-		this.dGraph.isConstructed.then(this.waitForFulfillment.bind(this))
+		this.dGraph.rootGraph.isConnected.then(this.waitForFulfillment.bind(this))
 	}
 
 	/**
@@ -400,13 +403,12 @@ class GraphDNode extends DNode {
 		let dispose
 		dispose = autorun(() => {
 			let args = this.getInputs()
-			if (this.name.includes('discounts')) {
-				console.log(`${this.name} args`, args)
-			}
 			const undefinedPaths = this.dGraph.getUndefinedPaths(args)
 			if (undefinedPaths.length === 0) {
 				this.subgraph.run(args).then(result => {
-					// this.log(` -> Subgraph '${this.name}' resolving.`, result)
+					if (this.dGraph.options.logUndefinedPaths) {
+						this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
+					}
 					this.resolveNode(result)
 					if (dispose) {
 						dispose()
@@ -421,7 +423,7 @@ class GraphDNode extends DNode {
 				})
 			}
 			else if (this.dGraph.options.logUndefinedPaths) {
-				this.log(`Undefined input paths in subgraph '${this.name}'`, undefinedPaths)
+				this.subgraph.logUndefinedPaths(undefinedPaths)
 			}
 		})
 	}

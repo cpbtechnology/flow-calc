@@ -59,9 +59,27 @@ let nGraphs = 0
  * taxed or not, we should be able to build a mostly re-usable cost graph and just 
  * plug in the tax calculation subgraph for each state.
  * 
+ * NB Current limitations:
+ * 
+ * - Diagnostics are not very helpful. When things go wrong the graph can often 
+ *   just stall in an unresolved state with little clue as to what didn't work out.
+ * 
+ * - Subgraph nodes can depend on interior nodes of other subgraphs, BUT ONLY if there 
+ *   no resulting cycle between the *subgraph* nodes themselves. In other words if
+ *   A and B are subgraphs, A.nodeInA can depend on B.nodeInB, or vice-versa, but
+ *   if you have dependencies in *both* directions, the graph will never resolve, even 
+ *   if there is no logical cycle among individual nodes (that is, if they were all 
+ *   together in a single big graph). You can work around for now this by defining 
+ *   an alias of one of the values in the root graph and then referring to that.
+ * 
+ * 
+ * @param {Array} graphDefinition A list of nodes describing this graph.
+ * @param {String} [name] The name of the graph.
+ * @param {DGraph} [supergraph] This graph's supergraph (used by graph nodes).
+ * @param {Object} [options] Options object.
  */
 class DGraph {
-	constructor (graphDefinition, name, options) {
+	constructor (graphDefinition, name, supergraph, options) {
 
 		if (!graphDefinition) {
 			throw new Error('No graph definition was supplied.')
@@ -69,6 +87,17 @@ class DGraph {
 
 		this.graphDefinition = graphDefinition
 		this.name = name || `Unnamed-DGraph-${nGraphs++}`
+
+		// supergraph argument is optional. if something is 
+		// passed but is not a DGraph, assume it's an options argument.
+		if (supergraph && (supergraph instanceof DGraph)) {
+			this.supergraph = supergraph
+		}
+		else {
+			this.supergraph = null
+			options = supergraph
+		}
+
 		this._graph = null
 		this.isConstructed = Promise.resolve(false)
 		this.options = _.defaults({}, options, {
@@ -91,6 +120,14 @@ class DGraph {
 			indent += '  '
 		}
 		console.log(indent, ...args)
+	}
+
+	get rootGraph ()  {
+		let supergraph = this.supergraph ? this.supergraph : this
+		while (supergraph.supergraph) {
+			supergraph = supergraph.supergraph
+		}
+		return supergraph
 	}
 
 	_preprocessGraphDef (graphDef) {
@@ -156,9 +193,13 @@ class DGraph {
 			multigraph: true
 		})
 		let resolveGraphIsConstructed
+		let resolveGraphIsConnected
 
 		this.isConstructed = new Promise((resolve, reject) => {
 			resolveGraphIsConstructed = resolve
+		})
+		this.isConnected = new Promise((resolve, reject) => {
+			resolveGraphIsConnected = resolve
 		})
 
 		const graphDef = this._preprocessGraphDef(this.graphDefinition)
@@ -171,16 +212,13 @@ class DGraph {
 			return new DNodeClass(this, nodeDef)
 		})
 
+		let subgraphsConstructedPromises = []
+
 		for (let dNode of dNodes) {
 			// this.log(`creating node ${dNode.name}`)
 			this._graph.setNode(dNode.name, dNode)
-		}
-
-		// TODO: this seems not to be doing quite the right thing yet.
-		for (let dNode of dNodes) {
-			const dependentNodeIds = _.uniq(DGraph.collectDependentNodeIds(dNode))
-			for (let nodeId of dependentNodeIds) {
-				this._graph.setEdge(dNode.name, nodeId)
+			if (dNode.type === 'graph') {
+				subgraphsConstructedPromises.push(dNode.isConstructed)
 			}
 		}
 
@@ -190,6 +228,17 @@ class DGraph {
 
 		// this.log(`[${this.name}] is constructed`)
 		resolveGraphIsConstructed()
+
+		Promise.all(subgraphsConstructedPromises).then(() => {
+			// TODO: this seems not to be doing quite the right thing yet.
+			for (let dNode of dNodes) {
+				const dependentNodeIds = _.uniq(DGraph.collectDependeeNodeIds(dNode))
+				for (let nodeId of dependentNodeIds) {
+					this._graph.setEdge(nodeId, dNode.name)
+				}
+			}
+			resolveGraphIsConnected()
+		})
 	}
 
 	getUndefinedPaths (obj = null) {
@@ -261,10 +310,7 @@ class DGraph {
 					}
 					else {
 						if (this.options.logUndefinedPaths) {
-							// TODO: sort these according to dependencies.
-							// const sortedNodeIds = graphlib.alg.topsort(this._graph)
-							// console.log({ sorted: sortedNodeIds.map(id => ({ id, predecessors: this._graph.predecessors(id).join(', ') })) })
-							this.log(`Undefined paths in '${this.name}'`, undefinedPaths)
+							this.logUndefinedPaths(undefinedPaths)
 						}
 					}
 				}
@@ -280,6 +326,20 @@ class DGraph {
 				}
 			})
 		})
+	}
+
+	logUndefinedPaths (undefinedPaths) {
+		// let sortedNodeIds = graphlib.alg.topsort(this._graph)
+		// sortedNodeIds = sortedNodeIds.filter(id => undefinedPaths.includes(id))
+		this.log(`[log-undefined-paths] Undefined paths in '${this.name}':`)
+		for (let nodeId of undefinedPaths) {
+			// const predecessors = this._graph.predecessors(nodeId)
+			this.log(`    '${nodeId}'`)
+			// if (predecessors && predecessors.length) {
+			// 	this.log(`     <- ${predecessors.join(', ')}`)
+			// }
+			
+		}
 	}
 
 	getDNode (name) {
@@ -394,7 +454,7 @@ DGraph.collectExpectedInputPaths = (graphDef) => {
  * 
  * TODO: possibly not yet working correctly.
  */
-DGraph.collectDependentNodeIds = (dNode) => {
+DGraph.collectDependeeNodeIds = (dNode) => {
 	let result = []
 	const pathPropertyNames = dNodeClasses[dNode.type].getNodeDefPathPropertyNames()
 	for (let propName of pathPropertyNames) {
