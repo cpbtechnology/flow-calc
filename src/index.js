@@ -354,8 +354,8 @@ class DGraph {
 		const dNode = this._graph.node('inputs')
 		for (const k in inputs) {
 			const existingNode = this._graph.node(k)
-			if (existingNode) {
-				throw new Error(`Input name '${k}' conflicts with existing node '${k}'.`)
+			if (existingNode && existingNode.type !== 'echo') {
+				throw new Error(`Input name '${k}' conflicts with existing node '${k}' in graph '${this.name}'.`)
 			}
 			const value = inputs[k]
 			if (value && _.isFunction(value.then)) {

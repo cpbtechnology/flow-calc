@@ -4,7 +4,7 @@ const DGraph = require('../lib')
 const graphDefinition = [
 	{ name: 'staticNode', type: 'static', value: 'hello, ' },
 	{ name: 'aliasNode', type: 'alias', mirror: 'inputs.stringValue' },
-	{ name: 'concatExample', type: 'transform', fn: 'concatN', inputs: ['staticNode', 'inputs.stringValue'] },
+	{ name: 'concatExample', type: 'transform', fn: 'concat', inputs: ['staticNode', 'inputs.stringValue'] },
 	{ name: 'multiplyExample', type: 'transform', fn: 'mult', inputs: { amt: 'inputs.numberValue', factor: 3 } }
 ]
 

@@ -80,20 +80,23 @@ Object.keys(graphDefs).filter(name => name !== mainGraphName).forEach(subgraphNa
 	fullGraphDef.push(subgraphDef)
 })
 
-args['templates'].forEach((path, i) => {
-	const graphDef = tryToLoad(path)
-	const fileName = getFilename(path)
-	if (Object.values(graphDef).includes(fileName)) {
-		throw new Error(`Multiple graph definitions found named ${fileName}.`)
-	}
-	const subgraphDef = { 
-		name: fileName, 
-		type: 'graph', 
-		isTemplate: true,
-		graphDef
-	}
-	fullGraphDef.push(subgraphDef)
-})
+if (args['templates']) {
+	args['templates'].forEach((path, i) => {
+		const graphDef = tryToLoad(path)
+		const fileName = getFilename(path)
+		if (Object.values(graphDef).includes(fileName)) {
+			throw new Error(`Multiple graph definitions found named ${fileName}.`)
+		}
+		const subgraphDef = { 
+			name: fileName, 
+			type: 'graph', 
+			isTemplate: true,
+			graphDef
+		}
+		fullGraphDef.push(subgraphDef)
+	})
+}
+
 
 const inputs = tryToLoad(args['inputs'])
 

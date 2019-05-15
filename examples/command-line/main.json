@@ -12,7 +12,7 @@
     {
         "name": "concatExample",
         "type": "transform",
-        "fn": "concatN",
+        "fn": "concat",
         "inputs": [
             "staticNode",
             "inputs.stringValue"

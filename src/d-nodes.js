@@ -70,6 +70,7 @@ class DNode {
 		this.originalNodeDef = _.cloneDeep(nodeDef)
 		this.dGraph = dGraph
 		this.srcFromPath = this.dGraph.srcFromPath
+		this.comments = this.originalNodeDef.comments && this.originalNodeDef.comments.length ? this.originalNodeDef.comments : null
 	}
 
 	get value () {
@@ -161,6 +162,17 @@ class StaticDNode extends DNode {
 
 decorate(StaticDNode, { value: computed })
 
+
+class CommentsDNode extends DNode {
+	constructor (dGraph, nodeDef) {
+		super(dGraph, nodeDef)
+	}
+
+	get value () {
+		return this.comments
+	}
+}
+
 /**
  * Provide an alias name for a path to a value. Usage:
  * 
@@ -183,6 +195,32 @@ class AliasDNode extends DNode {
 }
 
 decorate(AliasDNode, { value: computed })
+
+
+/**
+ * Echos to output state an input node with the same name as this node.
+ * Normally, inputs cannot have names that conflict with node names. The
+ * echo node is an exception to this.
+ * 
+ * An `inputName` prop is optional but if the input name is different
+ * you could probably use an alias node instead.
+ */
+class EchoDNode extends DNode {
+	constructor (dGraph, nodeDef) {
+		super(dGraph, nodeDef)
+		this.inputName = nodeDef.inputName ? nodeDef.inputName : this.name
+	}
+
+	get value () {
+		return this.getGraphValueAt(`inputs.${this.inputName}`)
+	}
+
+	static getNodeDefPathPropertyNames () {
+		return ['inputName']
+	}
+}
+
+decorate(EchoDNode, { value: computed })
 
 /**
  * Dereference a property using a dynamic value path.
@@ -217,7 +255,15 @@ class DereferenceDNode extends DNode {
 		}
 		const object = this.getGraphValueAt(this.objectSrcPath)
 		const propName = this.getGraphValueAt(this.propNameSrcPath)
-		return object && propName ? object[propName] : undefined
+		if (!_.isUndefined(object) && !_.isUndefined(propName)) {
+			// note: if the object and propName are not undefined--that is, those nodes have 
+			// resolved--but the attempt to dereference itself fails, we set the value for this 
+			// node to `null` instead of `undefined` so that this node does not appear to be 
+			// unresolved. use a `ternary` transform node to distinguish this case and provide a 
+			// default value.
+			return object[propName] ? object[propName] : null
+		}
+		return undefined
 	}
 
 	static getNodeDefPathPropertyNames () {
@@ -247,6 +293,9 @@ class TransformDNode extends DNode {
 	constructor (dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.fn = transformFns[nodeDef.fn]
+		if (!_.isFunction(this.fn)) {
+			throw new Error(`No transform function '${nodeDef.fn}' is defined.`)
+		}
 		if (!nodeDef.params) {
 			throw new Error(`No \`params\` defined on transform node ${nodeDef.name}.`)
 		}
@@ -256,6 +305,13 @@ class TransformDNode extends DNode {
 	get value () {
 		const args = _.mapValues(this.paramSrcPaths, srcPath => this.getGraphValueAt(srcPath))
 		let undefinedArgs = this.dGraph.getUndefinedPaths(args)
+		
+		// helpful debugging for when there are mystery undefined nodes:
+		//
+		// if (this.name.includes('borrowerCommissionPerDay')) {
+		// 	console.log('borrowerCommissionPerDay', args, undefinedArgs)
+		// }
+		//
 		return undefinedArgs.length === 0 ? this.fn(args) : undefined
 	}
 
@@ -448,7 +504,15 @@ class GraphDNode extends DNode {
 					// This allows for pass-through of the supergraph's `inputs`.
 					
 					const valuePath = src.valuePath && src.valuePath.length ? `${src.nodeId}.${src.valuePath}` : src.nodeId
-					const superGraphInputs = toJS(this.dGraph.getDNode('inputs').value)
+
+					// try the immediate supergraph
+					let superGraphInputs = toJS(this.dGraph.getDNode('inputs').value)
+					
+					if (!superGraphInputs || _.isEmpty(superGraphInputs)) {
+						// no inputs? try the root graph.
+						superGraphInputs = toJS(this.dGraph.rootGraph.getDNode('inputs').value)
+					}
+
 					if (!_.has(superGraphInputs, src.nodeId)) {
 
 						// If we did not find a node in the supergraph named src.nodeId,
@@ -504,7 +568,9 @@ decorate(GraphDNode, {
 
 module.exports = {
 	static: StaticDNode,
+	comments: CommentsDNode,
 	alias: AliasDNode,
+	echo: EchoDNode,
 	dereference: DereferenceDNode,
 	transform: TransformDNode,
 	inputs: InputsDNode,
