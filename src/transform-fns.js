@@ -27,7 +27,7 @@ const andN = (items) => extractNItems(items).reduce((t, v) => !!t && !!v, true)
 const orN = (items) => extractNItems(items).reduce((t, v) => t || v, false)
 const concat = (items) => extractNItems(items).reduce((t, a) => t + a, '')
 const filter = ({ collection, path, value }) => extractNItems(collection).filter(_filterFn({ path, value }))
-const filterNot = ({ collection, path }) => extractNItems(collection).filter(_filterNotFn({ path, value }))
+const filterNot = ({ collection, path, value }) => extractNItems(collection).filter(_filterNotFn({ path, value }))
 const find = ({ collection, propName, propValue }) => extractNItems(collection).find(item => item[propName] === propValue)
 
 const not = ({item}) => _.isBoolean(item) && !item
@@ -66,6 +66,14 @@ const map = ({ collection, fn, params }) => collection.map(item => {
 	return module.exports[fn](args)
 })
 
+const pick = ({ src, propNames }) => _.pick(src, propNames)
+const omit = ({ src, propNames }) => _.omit(src, propNames)
+const merge = ({ a, b }) => _.merge({}, a, b)
+const box = ({ value, propName }) => ({ [propName]: value })
+
+// note currently can't get path values for a nested array of paths, so can only add one prop at a time.
+const addProp = ({ src, propName, propValue }) => _.merge({}, src, { [propName]: propValue })
+
 module.exports = {
 	addN,
 	addFactor,
@@ -96,5 +104,10 @@ module.exports = {
 	filter,
 	filterNot,
 	find,
-	map
+	map,
+	pick,
+	omit,
+	merge,
+	box,
+	addProp
 }

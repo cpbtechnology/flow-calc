@@ -13,7 +13,7 @@
         "name": "concatExample",
         "type": "transform",
         "fn": "concat",
-        "inputs": [
+        "params": [
             "staticNode",
             "inputs.stringValue"
         ]
@@ -27,7 +27,7 @@
         "name": "multiplyExample",
         "type": "transform",
         "fn": "mult",
-        "inputs": {
+        "params": {
             "amt": "inputs.numberValue",
             "factor": "subgraph.subgraphComputedValue"
         }

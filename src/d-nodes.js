@@ -101,8 +101,10 @@ class DNode {
 		}
 
 		let nodeValue = dNode.get ? dNode.get() : dNode.value
-		nodeValue = (nodeValue && nodeValue.get) ? nodeValue.get() : nodeValue
 		
+		// note check for not being an array.
+		nodeValue = (nodeValue && nodeValue.get && !_.isArray(nodeValue)) ? nodeValue.get() : nodeValue
+
 		let result = !_.isUndefined(nodeValue) ? toJS(nodeValue) : undefined
 
 		if (!_.isUndefined(result) && !_.isUndefined(valuePath)) {
@@ -308,10 +310,10 @@ class TransformDNode extends DNode {
 		
 		// helpful debugging for when there are mystery undefined nodes:
 		//
-		// if (this.name.includes('borrowerCommissionPerDay')) {
-		// 	console.log('borrowerCommissionPerDay', args, undefinedArgs)
+		// if (this.name === 'nonDayrateDiscounts') {
+		// 	console.log('nonDayrateDiscounts', args, undefinedArgs)
 		// }
-		//
+		
 		return undefinedArgs.length === 0 ? this.fn(args) : undefined
 	}
 
@@ -364,6 +366,53 @@ decorate(AsyncDNode, {
 	promise: observable
 })
 
+/**
+ * Acts like a switch statement for other graph values, depending
+ * on the value of passed `test` value as compared to elements of the 
+ * passed `cases` array.
+ * 
+ * Expects a one-to-one mapping from `cases` to `nodeNames`.
+ * 
+ * A `_default_` case can be included (& hopefully no one would ever
+ * need a legit value to be "_default_").
+ */
+class BranchDNode extends DNode {
+	constructor (dGraph, nodeDef) {
+		super(dGraph, nodeDef)
+		this.cases = _.cloneDeep(nodeDef.cases)
+		this.test = _.cloneDeep(nodeDef.test)
+		this.nodeNames = _.cloneDeep(nodeDef.nodeNames)
+	}
+
+	_switch (test, cases, values) {
+		const defaultIdx = cases.findIndex('_default_')
+		let result
+		_.forEach(cases, (_case, i) => {
+			if (test === _case) {
+				result = values[i]
+			}
+			else if (defaultFnIdx !== -1) {
+				result = values[defaultIdx]
+			}
+		})
+		return result
+	}
+
+	get value () {
+		const nodeName = this._switch(this.test, this.cases, this.nodeNames)
+		return this.getGraphValueAt(nodeName)
+	}
+
+	static getNodeDefPathPropertyNames () {
+		return ['nodeNames']
+	}
+}
+
+decorate(BranchDNode, { 
+	value: computed
+})
+
+
 let DGraph
 
 /**
@@ -394,15 +443,19 @@ class GraphDNode extends DNode {
 			DGraph = require('./index')
 		}
 
+		this.collectionMode = nodeDef.collectionMode 
+
 		if (nodeDef.isTemplate) {
 			this._value = `Template Node ${this.name}`
 			this.isTemplate = true
 		}
 		else {
-			// support copying another graph node's graphDef
+			// support copying another graph node's graphDef.
 			if (_.isString(nodeDef.graphDef)) {
 				this.dGraph.isConstructed.then(() => {
-					const templateDNode = this.dGraph.getDNode(nodeDef.graphDef)
+
+					// search up the tree.
+					const templateDNode = this.dGraph.getDNode(nodeDef.graphDef, true)
 					if (!templateDNode) {
 						throw new Error(`Subgraph node ${this.name} cannot find graphDef template at path ${nodeDef.graphDef}.`)
 					}
@@ -427,15 +480,8 @@ class GraphDNode extends DNode {
 			this.inputSrcs = _.mapValues(paths, this.srcFromPath)
 		}
 
-		this.subgraph = new DGraph(
-			graphDef, 
-			`${this.dGraph.name}.${this.name}`, 
-			this.dGraph,
-			{ 
-				...this.dGraph.options,
-				depth: this.dGraph.options.depth + 1 
-			}
-		)
+		// defer actually building the subgraph until time to run.
+		this.graphDef = _.cloneDeep(graphDef)
 
 		this.promise = fromPromise(new Promise((resolve, reject) => {
 			this.resolveNode = resultValue => {
@@ -461,25 +507,85 @@ class GraphDNode extends DNode {
 			let args = this.getInputs()
 			const undefinedPaths = this.dGraph.getUndefinedPaths(args)
 			if (undefinedPaths.length === 0) {
-				this.subgraph.run(args).then(result => {
-					if (this.dGraph.options.logUndefinedPaths) {
-						this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
+				if (this.collectionMode === 'map') {
+					if (args.collection && _.isArray(args.collection)) {
+						this._runAsMap(args, dispose)
 					}
-					this.resolveNode(result)
-					if (dispose) {
-						dispose()
+					else {
+						throw new Error(`Graph node ${this.name}: if collectionMode is set to map, an input named \`collection\` must resolve to a single array.`)
 					}
-				}, (error) => {
-					runInAction(() => {
-						this.rejectNode(error)
-					})
-					if (dispose) {
-						dispose()
-					}
-				})
+				}
+				// TODO: collectionMode === 'reduce' ?
+				else {
+					this._runOnObj(args, dispose)
+				}
 			}
 			else if (this.dGraph.options.logUndefinedPaths) {
-				this.subgraph.logUndefinedPaths(undefinedPaths)
+				this.dGraph.logUndefinedPaths(undefinedPaths.map(p => `${this.name}.${p}`))
+			}
+		})
+	}
+
+	_runOnObj (args, dispose) {
+		const subgraph = new DGraph(
+			this.graphDef,
+			`${this.dGraph.name}.${this.name}`, 
+			this.dGraph,
+			{ 
+				...this.dGraph.options,
+				depth: this.dGraph.options.depth + 1 
+			}
+		)
+		subgraph.run(args).then(result => {
+			if (this.dGraph.options.logUndefinedPaths) {
+				this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
+			}
+			this.resolveNode(result)
+			if (dispose) {
+				dispose()
+			}
+		}, (error) => {
+			runInAction(() => {
+				this.rejectNode(error)
+			})
+			if (dispose) {
+				dispose()
+			}
+		})
+	}
+
+	_runAsMap (args, dispose) {
+		const collection = args.collection
+		const args = _.omit(args, 'collection')
+		let promises = collection.map((item, i) => { 
+			const subgraph = new DGraph(
+				this.graphDef,
+				`${this.dGraph.name}.${this.name}[${i}]`, 
+				this.dGraph,
+				{ 
+					...this.dGraph.options,
+					depth: this.dGraph.options.depth + 1 
+				}
+			)
+			return subgraph.run({
+				item,
+				args
+			})
+		})
+		Promise.all(promises).then(results => {
+			if (this.dGraph.options.logUndefinedPaths) {
+				this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
+			}
+			this.resolveNode(results)
+			if (dispose) {
+				dispose()
+			}
+		}, (error) => {
+			runInAction(() => {
+				this.rejectNode(error)
+			})
+			if (dispose) {
+				dispose()
 			}
 		})
 	}
@@ -566,6 +672,7 @@ decorate(GraphDNode, {
 	promise: observable
 })
 
+
 module.exports = {
 	static: StaticDNode,
 	comments: CommentsDNode,
@@ -575,5 +682,6 @@ module.exports = {
 	transform: TransformDNode,
 	inputs: InputsDNode,
 	async: AsyncDNode,
+	branch: BranchDNode,
 	graph: GraphDNode
 }

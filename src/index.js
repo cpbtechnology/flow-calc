@@ -290,7 +290,7 @@ class DGraph {
 		}
 
 		this.setInputs(inputs)
-		
+
 		let dispose
 		return new Promise((resolve, reject) => {
 			dispose = autorun(() => {
@@ -326,6 +326,7 @@ class DGraph {
 				}
 			})
 		})
+
 	}
 
 	logUndefinedPaths (undefinedPaths) {
@@ -342,8 +343,12 @@ class DGraph {
 		}
 	}
 
-	getDNode (name) {
-		return this._graph.node(name)
+	getDNode (name, searchAncestors = false) {
+		let node = this._graph.node(name)
+		if (!node && searchAncestors && this.supergraph) {
+			return this.supergraph.getDNode(name, searchAncestors)
+		}
+		return node
 	}
 
 	/**
@@ -435,12 +440,16 @@ DGraph.collectExpectedInputNames = (graphDef) => {
  * Traverse nodes and if any node depends on the `inputs` node,
  * collect the full path of that dependency, except for `inputs.` at the 
  * beginning of the path (that part is assumed).
+ * 
+ * Relies on DNode class advertising their property names that will refer
+ * to other nodes in `getNodeDefPathPropertyNames`.
  */
 DGraph.collectExpectedInputPaths = (graphDef) => {
 	let result = []
 	for (let nodeDef of graphDef) {
 		const pathPropertyNames = dNodeClasses[nodeDef.type].getNodeDefPathPropertyNames()
 		pathPropertyNames.forEach(propName => {
+			// prop name on node def
 			const normalizedPaths = DGraph.normalizePathDef(nodeDef[propName])
 			const inputPaths = _.values(normalizedPaths).filter(value => _.isString(value) && value.startsWith('inputs.'))
 			result = result.concat(inputPaths.map(path => path.split('.').slice(1).join('.')))
@@ -467,5 +476,7 @@ DGraph.collectDependeeNodeIds = (dNode) => {
 	return result
 }
 
+class SyncRunTimeout extends Error {}
+DGraph.SyncRunTimeout = SyncRunTimeout
 
 module.exports = DGraph

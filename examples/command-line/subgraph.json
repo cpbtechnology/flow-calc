@@ -3,7 +3,7 @@
         "name": "subgraphComputedValue",
         "type": "transform",
         "fn": "add",
-        "inputs": {
+        "params": {
             "a": "inputs.valueToInputToSubgraph",
             "b": 20
         }
