@@ -556,7 +556,10 @@ class GraphDNode extends DNode {
 
 	_runAsMap (args, dispose) {
 		const collection = args.collection
-		const args = _.omit(args, 'collection')
+		if (!_.isArray(collection)) {
+			throw new Error(`A \`collectionMode: map\` node must define a \`collection\` param that resolves to an array.`)
+		}
+		args = _.omit(args, 'collection')
 		let promises = collection.map((item, i) => { 
 			const subgraph = new DGraph(
 				this.graphDef,
