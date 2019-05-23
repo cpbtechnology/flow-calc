@@ -38,7 +38,7 @@ function tryToLoad(path) {
 			try {
 				result = require(`${prefix}/${path}`)
 			}
-			catch (e) {}
+			catch (e) {}  // eslint-disable-line no-empty
 		}
 	}
 	if (!result) {
@@ -81,7 +81,7 @@ Object.keys(graphDefs).filter(name => name !== mainGraphName).forEach(subgraphNa
 })
 
 if (args['templates']) {
-	args['templates'].forEach((path, i) => {
+	args['templates'].forEach(path => {
 		const graphDef = tryToLoad(path)
 		const fileName = getFilename(path)
 		if (Object.values(graphDef).includes(fileName)) {
@@ -110,6 +110,6 @@ const options = {
 // console.log(fullGraphDef.filter(d => d.type === 'graph'))
 const g = new DGraph(fullGraphDef, mainGraphName, options)
 g.run(inputs).then(results => {
-	console.log(` --- graph fulfilled --- `)
-	console.log(JSON.stringify(results, null, 4))
+	console.log(` --- graph fulfilled --- `) // eslint-disable-line no-console
+	console.log(JSON.stringify(results, null, 4)) // eslint-disable-line no-console
 })

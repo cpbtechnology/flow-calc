@@ -42,7 +42,7 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 				throw new Error(`Value at '${pathToArray}' is not an array.`)
 			}
 			else {
-				result = array.map((item, i) => {
+				result = array.map(item => {
 					if (pathAfterArray.length) {
 						return getValueAtPath(item, pathAfterArray)
 					}
@@ -391,7 +391,7 @@ class BranchDNode extends DNode {
 			if (test === _case) {
 				result = values[i]
 			}
-			else if (defaultFnIdx !== -1) {
+			else if (defaultIdx !== -1) {
 				result = values[defaultIdx]
 			}
 		})

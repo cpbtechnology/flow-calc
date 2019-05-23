@@ -1,11 +1,13 @@
-import { expect } from 'chai';
+/* eslint-disable */
+
+import { expect } from 'chai'
 import basic from './cases/basic'
 import paths from './cases/paths'
 import async from './cases/async'
 
 
 describe('Use case tests.', () => {
-  
+
   it('should fulfill to expected values  (basic)', function() {
     return basic.dGraph.run(basic.inputs).then(results => {
       expect(results).to.have.property('staticNode', 'hi there')

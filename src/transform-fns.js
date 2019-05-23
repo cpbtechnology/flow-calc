@@ -32,7 +32,7 @@ const find = ({ collection, propName, propValue }) => extractNItems(collection).
 
 const not = ({item}) => _.isBoolean(item) && !item
 
-const ternary = ({ test, pass, fail }) => !!test ? pass : fail
+const ternary = ({ test, pass, fail }) => test ? pass : fail
 
 
 
@@ -55,7 +55,7 @@ const eq = ({ a, b }) => !!(a === b)
 const clamp = ({ amt, min, max }) => Math.max(min, Math.min(max, amt))
 const roundCurrency = ({ amt }) => {
 	let r = amt
-	try { r = Number(amt.toFixed(2)) } catch (error) { console.log(`unable to round ${amt}`) }
+	try { r = Number(amt.toFixed(2)) } catch (error) { console.log(`unable to round ${amt}`) }  // eslint-disable-line no-console
 	return r
 }
 const includes = ({ item, isIncludedIn }) => isIncludedIn.includes(item)

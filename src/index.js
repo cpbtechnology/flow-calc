@@ -119,7 +119,7 @@ class DGraph {
 		for (let i = 0; i < this.options.depth; i++) {
 			indent += '  '
 		}
-		console.log(indent, ...args)
+		console.log(indent, ...args) // eslint-disable-line no-console
 	}
 
 	get rootGraph ()  {
@@ -195,10 +195,10 @@ class DGraph {
 		let resolveGraphIsConstructed
 		let resolveGraphIsConnected
 
-		this.isConstructed = new Promise((resolve, reject) => {
+		this.isConstructed = new Promise(resolve => {
 			resolveGraphIsConstructed = resolve
 		})
-		this.isConnected = new Promise((resolve, reject) => {
+		this.isConnected = new Promise(resolve => {
 			resolveGraphIsConnected = resolve
 		})
 
