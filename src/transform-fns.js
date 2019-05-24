@@ -3,37 +3,38 @@ const { getValueAtPath } = require('./object-path-utils')
 
 /**
  * Try to extract an array of values from arguments to the
- * xxxN functions. 
+ * xxxN functions.
  * 
  * Bit cheesy to accept all these variants. 
  * 
  * @param {*} items 
  */
 const extractNItems = (items) => {
+	let result = items
 	if (_.isObject(items)) {
-		return _.flattenDeep(_.values(items))
+		result = _.flattenDeep(_.values(items))
 	}
-	else if (_.isArray(items)) {
-		return _.flattenDeep(items)
+	if (_.isArray(items)) {
+		result = _.flattenDeep(items)
 	}
+	return result
 }
 
 // optionally accept a value; if undefined assume `true`
-const _filterFn = ({ path, value }) => ((item) => !!(getValueAtPath(item, path) === (_.isUndefined(value) ? true : value)))
-const _filterNotFn = ({ path, value }) => ((item) => !(getValueAtPath(item, path) === (_.isUndefined(value) ? true : value)))
+const _filterFn = ({ path, value }) => (item => !!(getValueAtPath(item, path) === (_.isUndefined(value) ? true : value)))
+const _filterNotFn = ({ path, value }) => (item => !(getValueAtPath(item, path) === (_.isUndefined(value) ? true : value)))
 
-const addN = (items) => extractNItems(items).reduce((t, a) => t + a, 0)
-const andN = (items) => extractNItems(items).reduce((t, v) => !!t && !!v, true)
-const orN = (items) => extractNItems(items).reduce((t, v) => t || v, false)
-const concat = (items) => extractNItems(items).reduce((t, a) => t + a, '')
+const addN = items => extractNItems(items).reduce((t, a) => t + a, 0)
+const andN = items => extractNItems(items).reduce((t, v) => !!t && !!v, true)
+const orN = items => extractNItems(items).reduce((t, v) => t || v, false)
+const concat = items => extractNItems(items).reduce((t, a) => t + a, '')
 const filter = ({ collection, path, value }) => extractNItems(collection).filter(_filterFn({ path, value }))
 const filterNot = ({ collection, path, value }) => extractNItems(collection).filter(_filterNotFn({ path, value }))
 const find = ({ collection, propName, propValue }) => extractNItems(collection).find(item => item[propName] === propValue)
 
-const not = ({item}) => _.isBoolean(item) && !item
+const not = ({ item }) => _.isBoolean(item) && !item
 
-const ternary = ({ test, pass, fail }) => test ? pass : fail
-
+const ternary = ({ test, pass, fail }) => (test ? pass : fail)
 
 
 const add = ({ a, b }) => a + b
@@ -55,13 +56,13 @@ const eq = ({ a, b }) => !!(a === b)
 const clamp = ({ amt, min, max }) => Math.max(min, Math.min(max, amt))
 const roundCurrency = ({ amt }) => {
 	let r = amt
-	try { r = Number(amt.toFixed(2)) } catch (error) { console.log(`unable to round ${amt}`) }  // eslint-disable-line no-console
+	try { r = Number(amt.toFixed(2)) } catch (error) { console.log(`unable to round ${amt}`) } // eslint-disable-line no-console
 	return r
 }
 const includes = ({ item, isIncludedIn }) => isIncludedIn.includes(item)
-const isNonEmptyString = ({item}) => !!item && _.isString(item) && item.trim().length > 0
+const isNonEmptyString = ({ item }) => !!item && _.isString(item) && item.trim().length > 0
 
-const map = ({ collection, fn, params }) => collection.map(item => {
+const map = ({ collection, fn, params }) => collection.map((item) => {
 	const args = _.mapValues(params, localPath => getValueAtPath(item, localPath))
 	return module.exports[fn](args)
 })

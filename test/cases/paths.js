@@ -1,3 +1,4 @@
+/* eslint-disable */
 const DGraph = require('../../src/index')
 
 const testGraph = [

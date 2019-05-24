@@ -141,7 +141,7 @@ module.exports = {
 		}
 		let pathSoFar = []
 		let done = false
-		let result = oObj ? oObj : undefined
+		let result = oObj || undefined
 		while (!done) {
 			const currentBit = bits[0]
 			const nextIsArray = !_.isNaN(parseInt(currentBit, 10))

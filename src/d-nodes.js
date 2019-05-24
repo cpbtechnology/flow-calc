@@ -22,7 +22,6 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 		// that we have to remove dots by hand to get usable paths.
 		const matches = path.match(/^(.+\.)?\*(\..+)?$/)
 		if (matches && matches.length === 3) {
-			
 			// remove dots where needed ...
 			const pathToArray = matches[1] ? matches[1].substring(0, matches[1].length - 1) : ''
 			const pathAfterArray = matches[2] ? matches[2].substring(1) : ''

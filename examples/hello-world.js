@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-const DGraph = require('../lib')
+const DGraph = require('../dist')
 
 const graphDefinition = [
 	{ name: 'staticNode', type: 'static', value: 'hello, ' },

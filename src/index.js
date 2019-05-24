@@ -95,12 +95,12 @@ class DGraph {
 		}
 		else {
 			this.supergraph = null
-			options = supergraph
+			options = supergraph // eslint-disable-line no-param-reassign
 		}
 
 		this._graph = null
 		this.isConstructed = Promise.resolve(false)
-		this.options = _.defaults({}, options, {
+		this.options = _.defaults({}, options, { // eslint-disable-line no-param-reassign
 			echoInputs: false,
 			echoTemplates: false,
 			echoIntermediates: false,
@@ -142,7 +142,9 @@ class DGraph {
 				if (!_.isArray(aliases)) {
 					aliases = [aliases]
 				}
-				aliases.forEach(a => def.push({ name: a, type: 'alias', mirror: nodeDef.name }))
+				for (let a of aliases) {
+					def.push({ name: a, type: 'alias', mirror: nodeDef.name })
+				}
 			}
 		}
 		
@@ -250,7 +252,7 @@ class DGraph {
 	}
 
 	shouldIncludeNodeValue (dNode) {
-		let result = !name.startsWith('#') && (!(dNode instanceof dNodeClasses.inputs) || this.options.echoInputs)
+		let result = !dNode.name.startsWith('#') && (!(dNode instanceof dNodeClasses.inputs) || this.options.echoInputs)
 		result = result && dNode.echoTo
 		return result
 	}
@@ -446,14 +448,15 @@ DGraph.collectExpectedInputNames = (graphDef) => {
  */
 DGraph.collectExpectedInputPaths = (graphDef) => {
 	let result = []
+
 	for (let nodeDef of graphDef) {
 		const pathPropertyNames = dNodeClasses[nodeDef.type].getNodeDefPathPropertyNames()
-		pathPropertyNames.forEach(propName => {
+		for (let propName of pathPropertyNames) {
 			// prop name on node def
 			const normalizedPaths = DGraph.normalizePathDef(nodeDef[propName])
 			const inputPaths = _.values(normalizedPaths).filter(value => _.isString(value) && value.startsWith('inputs.'))
 			result = result.concat(inputPaths.map(path => path.split('.').slice(1).join('.')))
-		})
+		}
 	}
 	return result
 }

@@ -1,5 +1,15 @@
 /* eslint-disable */
 
+const sayHello = (name = "Haz") => `Hello, ${name}!`;
+
+test("sayHello", () => {
+  expect(sayHello()).toBe("Hello, Haz!");
+  expect(sayHello("foo")).toBe("Hello, foo!");
+});
+
+// TODO: actual tests ...
+
+/*
 import { expect } from 'chai'
 import basic from './cases/basic'
 import paths from './cases/paths'
@@ -44,3 +54,4 @@ describe('Use case tests.', () => {
   });
 
 });
+*/

@@ -34,5 +34,5 @@ dGraph.run({
 		{ bar: 5 }
 	]
 }).then(result => {
-	console.log(result)
+	console.log(result) // eslint-disable-line no-console
 })

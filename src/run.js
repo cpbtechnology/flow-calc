@@ -1,5 +1,5 @@
-const DGraph = require('./index')
 const yargs = require('yargs')
+const DGraph = require('./index')
 
 const args = yargs.option('graph-definitions', {
 	alias: 'g',
@@ -36,7 +36,7 @@ function tryToLoad(path) {
 	for (let prefix of prefixes) {
 		if (!result) {
 			try {
-				result = require(`${prefix}/${path}`)
+				result = require(`${prefix}/${path}`)	// eslint-disable-line global-require import/no-dynamic-require
 			}
 			catch (e) {}  // eslint-disable-line no-empty
 		}

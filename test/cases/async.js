@@ -1,3 +1,4 @@
+/* eslint-disable */
 const DGraph = require('../../src/index')
 
 // as of now, input values can be promises, 
