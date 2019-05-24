@@ -1,64 +1,80 @@
 {
   "name": "flow-calc",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Run and serialize business logic and calculations using dependency graphs and reactive/flow programming.",
-  "main": "./lib/index.js",
-  "scripts": {
-    "clean": "rimraf lib",
-    "test": "npm run lint && npm run cover",
-    "test:prod": "cross-env BABEL_ENV=production npm run test",
-    "test:only": "mocha --require babel-core/register --require babel-polyfill",
-    "test:watch": "npm test -- --watch",
-    "test:examples": "node examples/",
-    "cover": "nyc --check-coverage --lines 10 npm run test:only",
-    "lint": "eslint src test",
-    "build": "cross-env BABEL_ENV=production babel src --out-dir lib",
-    "prepublish": "npm run clean && npm run lint && npm run test && npm run build"
+  "license": "MIT",
+  "repository": "cpbtechnology/flow-calc",
+  "main": "dist/index.js",
+  "author": {
+    "name": "Eric Miller",
+    "email": "github+public@patternleaf.com",
+    "url": "https://github.com/patternleaf"
   },
   "files": [
-    "lib",
+    "dist",
     "src"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/cpbtechnology/flow-calc"
+  "scripts": {
+    "test": "jest",
+    "coverage": "npm test -- --coverage",
+    "postcoverage": "opn coverage/lcov-report/index.html",
+    "lint": "eslint .",
+    "flow": "flow check",
+    "docs": "documentation readme src --section=API",
+    "postdocs": "git add README.md",
+    "clean": "rimraf dist",
+    "flowbuild": "flow-copy-source src dist",
+    "prebuild": "npm run docs && npm run clean && npm run flowbuild",
+    "build": "babel src -d dist",
+    "preversion": "npm run lint && npm test && npm run build",
+    "version": "standard-changelog && git add CHANGELOG.md",
+    "postpublish": "git push origin master --follow-tags"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "git add"
+    ]
   },
   "keywords": [
-    "reactive",
-    "flow",
-    "spreadsheet",
-    "node",
-    "javascript"
+    "generator-nod"
   ],
-  "author": "Eric Miller <github+public@patternleaf.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/cpbtechnology/flow-calc/issues"
-  },
-  "homepage": "https://github.com/cpbtechnology/flow-calc#readme",
-  "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-eslint": "^10.0.1",
-    "babel-plugin-add-module-exports": "^1.0.0",
-    "babel-polyfill": "^6.26.0",
-    "babel-preset-env": "^1.6.1",
-    "babel-preset-minify": "^0.5.0",
-    "chai": "^4.1.2",
-    "cross-env": "^5.1.3",
-    "eslint": "^5.16.0",
-    "eslint-config-airbnb": "^17.1.0",
-    "eslint-plugin-import": "^2.7.0",
-    "eslint-plugin-jsx-a11y": "^6.0.2",
-    "eslint-plugin-react": "^7.4.0",
-    "mocha": "^6.1.3",
-    "nyc": "^13.3.0",
-    "rimraf": "^2.6.2"
-  },
   "dependencies": {
     "graphlib": "^2.1.7",
     "lodash": "^4.17.11",
     "mobx": "^5.9.4",
     "mobx-utils": "^5.4.0",
     "yargs": "^13.2.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.2.3",
+    "@babel/core": "7.3.4",
+    "@babel/plugin-proposal-class-properties": "7.3.4",
+    "@babel/preset-env": "7.3.4",
+    "@babel/preset-flow": "7.0.0",
+    "babel-eslint": "10.0.1",
+    "babel-jest": "24.1.0",
+    "documentation": "9.3.0",
+    "eslint": "5.15.1",
+    "eslint-config-airbnb-base": "13.1.0",
+    "eslint-config-prettier": "4.1.0",
+    "eslint-plugin-flowtype": "3.4.2",
+    "eslint-plugin-flowtype-errors": "4.0.0",
+    "eslint-plugin-import": "2.16.0",
+    "eslint-plugin-prettier": "3.0.1",
+    "flow-bin": "0.94.0",
+    "flow-copy-source": "2.0.3",
+    "husky": "1.3.1",
+    "jest": "24.1.0",
+    "lint-staged": "8.1.5",
+    "opn-cli": "4.0.0",
+    "prettier": "1.16.4",
+    "rimraf": "2.6.3",
+    "standard-changelog": "2.0.7"
   }
 }
