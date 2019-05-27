@@ -479,27 +479,47 @@ DGraph.collectExpectedInputNames = graphDef => DGraph.collectExpectedInputPaths(
  *
  * Relies on DNode class advertising their property names that will refer
  * to other nodes in `getPathProps`.
+ *
+ * Pass `recursive` to include subgraph inputs in result. This will not
+ * currently include template subgraph inputs.
  */
-DGraph.collectExpectedInputPaths = (graphDef) => {
+DGraph.collectExpectedInputPaths = (graphDef, recursive = false) => {
 	let result = []
-
+	const graphNodeNames = graphDef.map(n => n.name)
 	for (const nodeDef of graphDef) {
 		const pathProps = dNodeClasses[nodeDef.type].getPathProps()
 		const pathPropertyNames = _.keys(pathProps)
 		for (const propName of pathPropertyNames) {
-			// prop name on node def
 			const normalizedPaths = DGraph.normalizePathDef(nodeDef[propName])
 			const inputPaths = _.values(normalizedPaths).filter(value => _.isString(value) && value.startsWith('inputs.'))
 			result = result.concat(inputPaths.map(path => path.split('.').slice(1).join('.')))
 		}
+
+		// Note this will currently not capture inputs in templates.
+		if (recursive && nodeDef.type === 'graph' && nodeDef.graphDef) {
+			let subgraphInputs = DGraph.collectExpectedInputPaths(nodeDef.graphDef, true)
+			console.log('searching subgraph ', subgraphInputs)
+			// a subgraph's inputs implicitly includes all nodes in the supergraph.
+			// so, with respect to this graph's expected inputs, filter those subgraph
+			// input names that are found as regular nodes in this graph--this graph's node
+			// satisfies the input.
+			subgraphInputs = subgraphInputs.filter(subgraphInput => !graphNodeNames.includes(subgraphInput))
+			result = result.concat(subgraphInputs)
+		}
 	}
-	return result
+	return _.uniq(result)
 }
 
 /**
- * Collect names of nodes that this node refers to; ie, that it depends upon.
+ * Collect edges, v -> w, read _v depends upon w_. Resulting edges are shaped:
  *
- * TODO: possibly not yet working correctly.
+ * {
+ *   srcNodeId,
+ *   srcPropName,
+ *   dstNodeId,
+ *   dstValuePath
+ * }
+ *
  */
 DGraph.collectEdgeDefs = (dNode) => {
 	const result = []

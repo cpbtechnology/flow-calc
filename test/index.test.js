@@ -1,15 +1,9 @@
 /* eslint-disable */
 const DGraph = require('../src/index')
 
-const sayHello = (name = "Haz") => `Hello, ${name}!`;
+// TODO: actual tests ...
 
-test("sayHello", () => {
-  expect(sayHello()).toBe("Hello, Haz!");
-  expect(sayHello("foo")).toBe("Hello, foo!");
-});
-
-
-test('edges', () => {
+test('edges look ok', () => {
   const graphDefinition = [
     { name: 'staticNode', type: 'static', value: 'hello, ' },
     { name: 'aliasNode', type: 'alias', mirror: 'inputs.stringValue' },
@@ -30,7 +24,23 @@ test('edges', () => {
   })
 
 })
-// TODO: actual tests ...
+
+test('recursive input path collection', () => {
+  const subgraphDef = [
+    { name: 'staticNode', type: 'static', value: 'hello, ' },
+    { name: 'aliasNode', type: 'alias', mirror: 'inputs.stringValue' },
+    { name: 'concatExample', type: 'transform', fn: 'concat', params: ['staticNode', 'inputs.stringValue'] },
+    { name: 'multiplyExample', type: 'transform', fn: 'mult', params: { amt: 'inputs.numberValue', factor: 3 } }
+  ]
+  const graphDefinition = [
+    { name: 'topLevelNode', type: 'alias', mirror: 'inputs.stringValue' },
+    { name: 'subgraphNode', type: 'graph', graphDef: subgraphDef }
+  ]
+
+  console.log(DGraph.collectExpectedInputPaths(graphDefinition, true))
+})
+
+
 
 /*
 import { expect } from 'chai'
