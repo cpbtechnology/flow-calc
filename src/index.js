@@ -498,7 +498,6 @@ DGraph.collectExpectedInputPaths = (graphDef, recursive = false) => {
 		// Note this will currently not capture inputs in templates.
 		if (recursive && nodeDef.type === 'graph' && nodeDef.graphDef) {
 			let subgraphInputs = DGraph.collectExpectedInputPaths(nodeDef.graphDef, true)
-			console.log('searching subgraph ', subgraphInputs)
 			// a subgraph's inputs implicitly includes all nodes in the supergraph.
 			// so, with respect to this graph's expected inputs, filter those subgraph
 			// input names that are found as regular nodes in this graph--this graph's node
