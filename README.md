@@ -531,15 +531,24 @@ beginning of the path (that part is assumed).
 Relies on DNode class advertising their property names that will refer
 to other nodes in `getPathProps`.
 
+Pass `recursive` to include subgraph inputs in result. This will not
+currently include template subgraph inputs.
+
 ##### Parameters
 
 -   `graphDef`  
+-   `recursive`   (optional, default `false`)
 
 #### collectEdgeDefs
 
-Collect names of nodes that this node refers to; ie, that it depends upon.
+Collect edges, v -> w, read _v depends upon w_. Resulting edges are shaped:
 
-TODO: possibly not yet working correctly.
+{
+  srcNodeId,
+  srcPropName,
+  dstNodeId,
+  dstValuePath
+}
 
 ##### Parameters
 
