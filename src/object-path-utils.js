@@ -3,7 +3,7 @@ const _ = require('lodash')
 module.exports = {
 
 	setValueAtPath: function setValueAtPath(obj, path, value) {
-		let bits = _.toPath(path)
+		const bits = _.toPath(path)
 		let v = obj
 		let p = bits.shift()
 		while (bits.length) {
@@ -19,7 +19,7 @@ module.exports = {
 	},
 
 	getValueAtPath: function getValueAtPath(obj, path) {
-		let bits = _.toPath(path)
+		const bits = _.toPath(path)
 		let v = obj
 		let p = bits.shift()
 		while (bits.length) {
@@ -86,23 +86,23 @@ module.exports = {
 	 * Flattens a deep object tree (arrays and objects) into a single
 	 * non-tree object whose keys are the paths of nested properties
 	 * with matching values.
-	 * 
+	 *
 	 * Properties with dots in their names should be preserved.
-	 * 
+	 *
 	 * Not super-speedy. :)
 	 *
 	 * @param {Object} obj Object to flatten.
 	 * @param {path => Boolean} filterFn Optionally filter which paths are included.
 	 */
 	flattenObject: function flattenObject(obj, filterFn) {
-		let result = {}
+		const result = {}
 		const unescapePath = p => p.replace(module.exports.pathDotUnescapeRegex, '.')
 		const escapedObject = module.exports.escapeObjectPaths(obj)
 		let escapedPaths = module.exports.collectObjectPaths(escapedObject)
 		if (filterFn) {
 			escapedPaths = escapedPaths.filter(p => filterFn(unescapePath(p)))
 		}
-		escapedPaths.forEach(p => {
+		escapedPaths.forEach((p) => {
 			result[unescapePath(p)] = module.exports.getValueAtPath(escapedObject, p)
 		})
 		return result
@@ -115,7 +115,7 @@ module.exports = {
 	 * @param {path => Boolean} filterFn Optionally filter which paths get expanded.
 	 */
 	expandObject: function expandObject(obj, filterFn) {
-		let result = {}
+		const result = {}
 		_.forOwn(obj, (v, k) => {
 			if (!filterFn || filterFn(k)) {
 				module.exports.pathValueToObject(k, v, result)
@@ -135,11 +135,11 @@ module.exports = {
 	 * @param {Object} obj If defined, create the path in this object or use object's existing path.
 	 */
 	pathValueToObject: function pathValueToObject(path, value, oObj = null) {
-		let bits = _.toPath(path)
+		const bits = _.toPath(path)
 		if (!bits.length) {
 			return {}
 		}
-		let pathSoFar = []
+		const pathSoFar = []
 		let done = false
 		let result = oObj || undefined
 		while (!done) {

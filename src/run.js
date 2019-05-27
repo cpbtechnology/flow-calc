@@ -1,3 +1,4 @@
+/* eslint-disable */
 const yargs = require('yargs')
 const DGraph = require('./index')
 
@@ -33,7 +34,7 @@ When this option is set, a log will be emitted for all such literals. This can h
 function tryToLoad(path) {
 	let result
 	const prefixes = [__dirname, process.cwd(), '']
-	for (let prefix of prefixes) {
+	for (const prefix of prefixes) {
 		if (!result) {
 			try {
 				result = require(`${prefix}/${path}`)	// eslint-disable-line global-require import/no-dynamic-require

@@ -26,6 +26,7 @@
     "guard-for-in": "warn",
     "no-restricted-syntax": "warn",
     "newline-per-chained-call": "off",
-    "no-multi-str": "warn"
+    "no-multi-str": "warn",
+    "prefer-destructuring": "off"
   }
 }

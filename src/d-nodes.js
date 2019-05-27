@@ -7,16 +7,16 @@ const transformFns = require('./transform-fns')
 
 /**
  * Supports using "*" to return an array of items.
- * 
+ *
  * "path.to.array.*" => <items of collection>
  * "path.to.array.*.path.in.item" => <extract value from each item in collection>
- * 
- * @param {*} obj 
- * @param {*} path 
+ *
+ * @param {*} obj
+ * @param {*} path
  */
 const getValueAtPathWithArraySupport = (obj, path) => {
 	let result
-	
+
 	if (path.includes('*')) {
 		// this regex supports "before.*.after", "before.*" and "*.after", with the caveat
 		// that we have to remove dots by hand to get usable paths.
@@ -25,15 +25,15 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 			// remove dots where needed ...
 			const pathToArray = matches[1] ? matches[1].substring(0, matches[1].length - 1) : ''
 			const pathAfterArray = matches[2] ? matches[2].substring(1) : ''
-			
+
 			// if pathToArray is empty, the obj itself is the array
 			let array = pathToArray.length ? getValueAtPath(obj, pathToArray) : obj
 
-			// TODO: not sure why/where/how an object with prop '*' is being created. work this out. 
+			// TODO: not sure why/where/how an object with prop '*' is being created. work this out.
 			if (_.isObject(array) && _.isArray(array['*'])) {
 				array = array['*']
 			}
-			
+
 			if (!_.isArray(array)) {
 				// console.log('---')
 				// console.log({ path, pathToArray, obj, array })
@@ -41,7 +41,7 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 				throw new Error(`Value at '${pathToArray}' is not an array.`)
 			}
 			else {
-				result = array.map(item => {
+				result = array.map((item) => {
 					if (pathAfterArray.length) {
 						return getValueAtPath(item, pathAfterArray)
 					}
@@ -64,7 +64,7 @@ const getValueAtPathWithArraySupport = (obj, path) => {
  * participates, and the node's definition.
  */
 class DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		this.name = nodeDef.name
 		this.originalNodeDef = _.cloneDeep(nodeDef)
 		this.dGraph = dGraph
@@ -72,17 +72,18 @@ class DNode {
 		this.comments = this.originalNodeDef.comments && this.originalNodeDef.comments.length ? this.originalNodeDef.comments : null
 	}
 
-	get value () {
+	get value() {
 		return undefined
 	}
 
-	log (...args) {
+	log(...args) {
 		this.dGraph.log(...args)
 	}
 
 
-	getGraphValueAt (srcPath) {
-		let nodeId, valuePath
+	getGraphValueAt(srcPath) {
+		let nodeId; let
+valuePath
 
 		if (_.isObject(srcPath)) {
 			nodeId = srcPath.nodeId
@@ -94,13 +95,13 @@ class DNode {
 			valuePath = src.valuePath
 		}
 
-		let dNode = this.dGraph.getDNode(nodeId)
+		const dNode = this.dGraph.getDNode(nodeId)
 		if (!dNode) {
 			this.log(`No dNode with id '${nodeId}' found in in graph '${this.dGraph.name}' (value path '${valuePath}'). Requesting node: '${this.name}'.`)
 		}
 
 		let nodeValue = dNode.get ? dNode.get() : dNode.value
-		
+
 		// note check for not being an array.
 		nodeValue = (nodeValue && nodeValue.get && !_.isArray(nodeValue)) ? nodeValue.get() : nodeValue
 
@@ -113,50 +114,55 @@ class DNode {
 		return result
 	}
 
-	get className () {
+	get className() {
 		return this.constructor.name
 	}
 
-	get type () {
+	get type() {
 		return this.originalNodeDef.type
 	}
 
-	get isVisibleInGraphState () {
+	get isVisibleInGraphState() {
 		let result = true
-		
+
 		result = result && (!this.name.startsWith('#') || this.dGraph.options.echoIntermediates)
-		result = result && (!(this instanceof InputsDNode) || this.dGraph.options.echoInputs)
+		result = result && (!(this instanceof InputsDNode) || this.dGraph.options.echoInputs) // eslint-disable-line no-use-before-define
 		result = result && !this.originalNodeDef.isHidden
 
 		return result
 	}
 
 	/**
-	 * Properties on the nodeDef that should be treated like paths 
-	 * to values in the graph. Allows checking for the existence of 
-	 * dependent nodes and inferring whether a property value is a 
+	 * Properties on the nodeDef that should be treated like paths
+	 * to values in the graph. Allows checking for the existence of
+	 * dependent nodes and inferring whether a property value is a
 	 * path to a node or a literal value.
+	 *
+	 * Return an object with keys that are property names and values
+	 * that describe how the property names should be handled/interpreted.
+	 * Currently the only such option is hasSubproperties, which is used
+	 * to help describe edge i/o. This is a wee messy.
 	 */
-	static getNodeDefPathPropertyNames () {
-		return []
+	static getPathProps() {
+		return {}
 	}
 
 }
 
 /**
- * Initial value is its forever value. 
- * 
+ * Initial value is its forever value.
+ *
  * Usage:
- * 
+ *
  * { name: <node name>, type: "static", value: <any JS value> }
  */
 class StaticDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.originalValue = nodeDef.value
 	}
 
-	get value () {
+	get value() {
 		return this.originalValue
 	}
 }
@@ -165,33 +171,29 @@ decorate(StaticDNode, { value: computed })
 
 
 class CommentsDNode extends DNode {
-	constructor (dGraph, nodeDef) {
-		super(dGraph, nodeDef)
-	}
-
-	get value () {
+	get value() {
 		return this.comments
 	}
 }
 
 /**
  * Provide an alias name for a path to a value. Usage:
- * 
+ *
  * { name: <node name>, type: "alias", mirror: "path.to.other.value" }
  */
 class AliasDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		// mirror prop will have been normalized to { name: path }
 		this.mirrorSrcPath = _.values(nodeDef.mirror)[0]
 	}
 
-	get value () {
+	get value() {
 		return this.getGraphValueAt(this.mirrorSrcPath)
 	}
 
-	static getNodeDefPathPropertyNames () {
-		return ['mirror']
+	static getPathProps() {
+		return { mirror: {} }
 	}
 }
 
@@ -202,22 +204,22 @@ decorate(AliasDNode, { value: computed })
  * Echos to output state an input node with the same name as this node.
  * Normally, inputs cannot have names that conflict with node names. The
  * echo node is an exception to this.
- * 
+ *
  * An `inputName` prop is optional but if the input name is different
  * you could probably use an alias node instead.
  */
 class EchoDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.inputName = nodeDef.inputName ? nodeDef.inputName : this.name
 	}
 
-	get value () {
+	get value() {
 		return this.getGraphValueAt(`inputs.${this.inputName}`)
 	}
 
-	static getNodeDefPathPropertyNames () {
-		return ['inputName']
+	static getPathProps() {
+		return { inputName: {} }
 	}
 }
 
@@ -225,20 +227,20 @@ decorate(EchoDNode, { value: computed })
 
 /**
  * Dereference a property using a dynamic value path.
- * 
- * Usage: 
- * 
- * { 
- *   name: <node name>, 
- *   type: "dereference", 
- *   objectPath: <path to `object` value to dereference>, 
+ *
+ * Usage:
+ *
+ * {
+ *   name: <node name>,
+ *   type: "dereference",
+ *   objectPath: <path to `object` value to dereference>,
  *   propNamePath: <path to `propName`, a string value>
  * }
- * 
+ *
  * The value of the node will be the value of object[propName].
  */
 class DereferenceDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		// normalization will have made these { name: path } pairs ... kinda silly.
 		this.objectSrcPath = _.values(nodeDef.objectPath)[0]
@@ -257,41 +259,45 @@ class DereferenceDNode extends DNode {
 		const object = this.getGraphValueAt(this.objectSrcPath)
 		const propName = this.getGraphValueAt(this.propNameSrcPath)
 		if (!_.isUndefined(object) && !_.isUndefined(propName)) {
-			// note: if the object and propName are not undefined--that is, those nodes have 
-			// resolved--but the attempt to dereference itself fails, we set the value for this 
-			// node to `null` instead of `undefined` so that this node does not appear to be 
-			// unresolved. use a `ternary` transform node to distinguish this case and provide a 
+			// note: if the object and propName are not undefined--that is, those nodes have
+			// resolved--but the attempt to dereference itself fails, we set the value for this
+			// node to `null` instead of `undefined` so that this node does not appear to be
+			// unresolved. use a `ternary` transform node to distinguish this case and provide a
 			// default value.
 			return object[propName] ? object[propName] : null
 		}
 		return undefined
 	}
 
-	static getNodeDefPathPropertyNames () {
-		return ['objectPath', 'propNamePath']
+	static getPathProps() {
+		return {
+			objectPath: {},
+			propNamePath: {}
+		}
+		// return ['objectPath', 'propNamePath']
 	}
 }
 
 decorate(DereferenceDNode, { value: computed })
 
 /**
- * Take the values of n input nodes and output a value based on 
+ * Take the values of n input nodes and output a value based on
  * one of several predefined functions.
- * 
- * Usage: 
- * 
- * { 
- *   name: <node name>, 
- *   type: "transform", 
+ *
+ * Usage:
+ *
+ * {
+ *   name: <node name>,
+ *   type: "transform",
  *   fn: <fn name, a function exported from transform-fns.js>
  *   params: {
  *     <...list of params, depending on fn>
  *   }
  * }
- * 
+ *
  */
 class TransformDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.fn = transformFns[nodeDef.fn]
 		if (!_.isFunction(this.fn)) {
@@ -303,21 +309,24 @@ class TransformDNode extends DNode {
 		this.paramSrcPaths = dGraph.normalizePathDef(nodeDef.params)
 	}
 
-	get value () {
+	get value() {
 		const args = _.mapValues(this.paramSrcPaths, srcPath => this.getGraphValueAt(srcPath))
-		let undefinedArgs = this.dGraph.getUndefinedPaths(args)
-		
+		const undefinedArgs = this.dGraph.getUndefinedPaths(args)
+
 		// helpful debugging for when there are mystery undefined nodes:
 		//
 		// if (this.name === 'nonDayrateDiscounts') {
 		// 	console.log('nonDayrateDiscounts', args, undefinedArgs)
 		// }
-		
+
 		return undefinedArgs.length === 0 ? this.fn(args) : undefined
 	}
 
-	static getNodeDefPathPropertyNames () {
-		return ['params']
+	static getPathProps() {
+		return {
+			params: { hasSubproperties: true }
+		}
+		// return ['params']
 	}
 }
 
@@ -327,16 +336,16 @@ decorate(TransformDNode, { value: computed })
  * Used internally to automatically create an `inputs` node.
  */
 class InputsDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this._value = observable.object({})
 	}
 
-	get value () {
+	get value() {
 		return this._value
 	}
 
-	setValue (key, value) {
+	setValue(key, value) {
 		runInAction(() => {
 			this._value[key] = value
 		})
@@ -350,40 +359,40 @@ decorate(InputsDNode, { value: computed })
  * node would not be serializable.
  */
 class AsyncDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.promise = fromPromise(nodeDef.promise)
 	}
 
-	get value () {
+	get value() {
 		return this.promise.value
 	}
 }
 
-decorate(AsyncDNode, { 
+decorate(AsyncDNode, {
 	value: computed,
 	promise: observable
 })
 
 /**
  * Acts like a switch statement for other graph values, depending
- * on the value of passed `test` value as compared to elements of the 
+ * on the value of passed `test` value as compared to elements of the
  * passed `cases` array.
- * 
+ *
  * Expects a one-to-one mapping from `cases` to `nodeNames`.
- * 
+ *
  * A `_default_` case can be included (& hopefully no one would ever
  * need a legit value to be "_default_").
  */
 class BranchDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.cases = _.cloneDeep(nodeDef.cases)
 		this.test = _.cloneDeep(nodeDef.test)
 		this.nodeNames = _.cloneDeep(nodeDef.nodeNames)
 	}
 
-	_switch (test, cases, values) {
+	_switch(test, cases, values) {
 		const defaultIdx = cases.findIndex('_default_')
 		let result
 		_.forEach(cases, (_case, i) => {
@@ -397,17 +406,20 @@ class BranchDNode extends DNode {
 		return result
 	}
 
-	get value () {
+	get value() {
 		const nodeName = this._switch(this.test, this.cases, this.nodeNames)
 		return this.getGraphValueAt(nodeName)
 	}
 
-	static getNodeDefPathPropertyNames () {
-		return ['nodeNames']
+	static getPathProps() {
+		return {
+			nodeNames: {}
+		}
+		// return ['nodeNames']
 	}
 }
 
-decorate(BranchDNode, { 
+decorate(BranchDNode, {
 	value: computed
 })
 
@@ -415,34 +427,34 @@ decorate(BranchDNode, {
 let DGraph
 
 /**
- * Create a subgraph node. The value of this node can depend on some of its 
+ * Create a subgraph node. The value of this node can depend on some of its
  * supergraph's nodes and its supergraph's nodes can depend on the value
- * of this node. Just be sure those are two separate sets of nodes: circular 
+ * of this node. Just be sure those are two separate sets of nodes: circular
  * dependencies will prevent the graph from ever fulfilling.
- * 
- * You can supply explicit inputs with an `inputs` property. Otherwise, the 
- * subgraph will attempt to find its required inputs automatically 
- * from its supergraph's nodes OR, barring that, from properties on its 
+ *
+ * You can supply explicit inputs with an `inputs` property. Otherwise, the
+ * subgraph will attempt to find its required inputs automatically
+ * from its supergraph's nodes OR, barring that, from properties on its
  * supergraph's `inputs` node.
- * 
+ *
  * Usage:
- * 
+ *
  * {
  *   name: <node name>,
  *   type: "graph",
  *   graphDef: <graph definition, aka an array of node definitions>
  *   [inputs]: <inputs definition (optional)>
  * }
- * 
+ *
  */
 class GraphDNode extends DNode {
-	constructor (dGraph, nodeDef) {
+	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		if (!DGraph) {
-			DGraph = require('./index')
+			DGraph = require('./index') // eslint-disable-line global-require
 		}
 
-		this.collectionMode = nodeDef.collectionMode 
+		this.collectionMode = nodeDef.collectionMode
 
 		if (nodeDef.isTemplate) {
 			this._value = `Template Node ${this.name}`
@@ -467,7 +479,7 @@ class GraphDNode extends DNode {
 		}
 	}
 
-	buildWithGraphDef (nodeDef, graphDef) {
+	buildWithGraphDef(nodeDef, graphDef) {
 		if (nodeDef.inputs) {
 			const explicitInputs = this.dGraph.normalizePathDef(nodeDef.inputs)
 			this.hasExplicitInputs = true
@@ -483,7 +495,7 @@ class GraphDNode extends DNode {
 		this.graphDef = _.cloneDeep(graphDef)
 
 		this.promise = fromPromise(new Promise((resolve, reject) => {
-			this.resolveNode = resultValue => {
+			this.resolveNode = (resultValue) => {
 				runInAction(() => {
 					this._value = resultValue
 					resolve(this._value)
@@ -500,10 +512,9 @@ class GraphDNode extends DNode {
 	/**
 	 * Don't we all ... don't we all.
 	 */
-	waitForFulfillment () {
-		let dispose
-		dispose = autorun(() => {
-			let args = this.getInputs()
+	waitForFulfillment() {
+		const dispose = autorun(() => {
+			const args = this.getInputs()
 			const undefinedPaths = this.dGraph.getUndefinedPaths(args)
 			if (undefinedPaths.length === 0) {
 				if (this.collectionMode === 'map') {
@@ -525,17 +536,17 @@ class GraphDNode extends DNode {
 		})
 	}
 
-	_runOnObj (args, dispose) {
+	_runOnObj(args, dispose) {
 		const subgraph = new DGraph(
 			this.graphDef,
-			`${this.dGraph.name}.${this.name}`, 
+			`${this.dGraph.name}.${this.name}`,
 			this.dGraph,
-			{ 
+			{
 				...this.dGraph.options,
-				depth: this.dGraph.options.depth + 1 
+				depth: this.dGraph.options.depth + 1
 			}
 		)
-		subgraph.run(args).then(result => {
+		subgraph.run(args).then((result) => {
 			if (this.dGraph.options.logUndefinedPaths) {
 				this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
 			}
@@ -553,20 +564,20 @@ class GraphDNode extends DNode {
 		})
 	}
 
-	_runAsMap (args, dispose) {
-		const collection = args.collection
+	_runAsMap(args, dispose) {
+		const { collection } = args
 		if (!_.isArray(collection)) {
 			throw new Error(`A \`collectionMode: map\` node must define a \`collection\` param that resolves to an array.`)
 		}
-		args = _.omit(args, 'collection')
-		let promises = collection.map((item, i) => { 
+		args = _.omit(args, 'collection') // eslint-disable-line no-param-reassign
+		const promises = collection.map((item, i) => {
 			const subgraph = new DGraph(
 				this.graphDef,
-				`${this.dGraph.name}.${this.name}[${i}]`, 
+				`${this.dGraph.name}.${this.name}[${i}]`,
 				this.dGraph,
-				{ 
+				{
 					...this.dGraph.options,
-					depth: this.dGraph.options.depth + 1 
+					depth: this.dGraph.options.depth + 1
 				}
 			)
 			return subgraph.run({
@@ -574,7 +585,7 @@ class GraphDNode extends DNode {
 				args
 			})
 		})
-		Promise.all(promises).then(results => {
+		Promise.all(promises).then((results) => {
 			if (this.dGraph.options.logUndefinedPaths) {
 				this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
 			}
@@ -592,30 +603,30 @@ class GraphDNode extends DNode {
 		})
 	}
 
-	getInputs () {
+	getInputs() {
 		let inputs
 		if (this.hasExplicitInputs) {
 			inputs = _.mapValues(this.inputSrcs, src => this.getGraphValueAt(src))
 		}
 		else {
-			
-			// No explicit inputs were provided in the graph def, so we're going to 
+
+			// No explicit inputs were provided in the graph def, so we're going to
 			// try to find our inputs automatically in the supergraph.
 
-			let args = _.mapValues(this.inputSrcs, src => {
+			const args = _.mapValues(this.inputSrcs, (src) => {
 				let result
 				if (!this.dGraph.getDNode(src.nodeId)) {
 
-					// Supergraph doesn't have the node named nodeId. 
-					// Let's try the supergraph's inputs node, reinterpreting this source's 
-					// nodeId as a top level property name on the supergraph's inputs. 
+					// Supergraph doesn't have the node named nodeId.
+					// Let's try the supergraph's inputs node, reinterpreting this source's
+					// nodeId as a top level property name on the supergraph's inputs.
 					// This allows for pass-through of the supergraph's `inputs`.
-					
+
 					const valuePath = src.valuePath && src.valuePath.length ? `${src.nodeId}.${src.valuePath}` : src.nodeId
 
 					// try the immediate supergraph
 					let superGraphInputs = toJS(this.dGraph.getDNode('inputs').value)
-					
+
 					if (!superGraphInputs || _.isEmpty(superGraphInputs)) {
 						// no inputs? try the root graph.
 						superGraphInputs = toJS(this.dGraph.rootGraph.getDNode('inputs').value)
@@ -625,15 +636,15 @@ class GraphDNode extends DNode {
 
 						// If we did not find a node in the supergraph named src.nodeId,
 						// and we did not find a top-level property in the supergraph's inputs
-						// named src.nodeId, we are out of luck. 
+						// named src.nodeId, we are out of luck.
 
 						throw new Error(`Subgraph '${this.name}' could not find a node or pass-through input from supergraph for expected input '${valuePath}'.`)
-						
+
 						// Note that we do these checks to differentiate between an undefined value
 						// for an actual path versus the lack of that path completely. A path can
 						// legitimately have an undefined value if some value in its dependency tree
-						// is async and has not yet fultilled. We don't want to error out in the 
-						// latter situation, but we do want to error out in the former, because the value 
+						// is async and has not yet fultilled. We don't want to error out in the
+						// latter situation, but we do want to error out in the former, because the value
 						// can never be fulfilled.
 					}
 
@@ -650,25 +661,28 @@ class GraphDNode extends DNode {
 		return inputs
 	}
 
-	get value () {
+	get value() {
 		// console.log(`'${this.name}' getter returning`, this._value)
 		return this._value
 		// return this.promise ? toJS(this.promise.value) : undefined
 	}
 
-	get isVisibleInGraphState () {
+	get isVisibleInGraphState() {
 		let result = super.isVisibleInGraphState
 		result = result && (!this.isTemplate || this.dGraph.options.echoTemplates)
 		return result
 	}
 
-	static getNodeDefPathPropertyNames () {
-		return ['inputs']
+	static getPathProps() {
+		return {
+			inputs: { hasSubproperties: true }
+		}
+		// return ['inputs']
 	}
 
 }
 
-decorate(GraphDNode, { 
+decorate(GraphDNode, {
 	value: computed,
 	_value: observable,
 	promise: observable

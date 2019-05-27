@@ -122,7 +122,6 @@ $ npm run docs # generate docs
 $ npm run build # generate docs and transpile code
 ```
 
-
 ## API Warning
 
 Note that API below is auto-generated and at this time is not checked for accuracy or usefulness.
@@ -137,7 +136,7 @@ Note that API below is auto-generated and at this time is not checked for accura
     -   [Parameters](#parameters)
 -   [DNode](#dnode)
     -   [Parameters](#parameters-1)
-    -   [getNodeDefPathPropertyNames](#getnodedefpathpropertynames)
+    -   [getPathProps](#getpathprops)
 -   [StaticDNode](#staticdnode)
     -   [Parameters](#parameters-2)
 -   [AliasDNode](#aliasdnode)
@@ -159,28 +158,32 @@ Note that API below is auto-generated and at this time is not checked for accura
     -   [waitForFulfillment](#waitforfulfillment)
 -   [DGraph](#dgraph)
     -   [Parameters](#parameters-11)
-    -   [setInputs](#setinputs)
+    -   [getDNode](#getdnode)
         -   [Parameters](#parameters-12)
-    -   [srcFromPath](#srcfrompath)
+    -   [getDNodes](#getdnodes)
+    -   [getDEdges](#getdedges)
+    -   [setInputs](#setinputs)
         -   [Parameters](#parameters-13)
-    -   [normalizePathDef](#normalizepathdef)
+    -   [srcFromPath](#srcfrompath)
         -   [Parameters](#parameters-14)
-    -   [collectExpectedInputNames](#collectexpectedinputnames)
+    -   [normalizePathDef](#normalizepathdef)
         -   [Parameters](#parameters-15)
-    -   [collectExpectedInputPaths](#collectexpectedinputpaths)
+    -   [collectExpectedInputNames](#collectexpectedinputnames)
         -   [Parameters](#parameters-16)
-    -   [collectDependeeNodeIds](#collectdependeenodeids)
+    -   [collectExpectedInputPaths](#collectexpectedinputpaths)
         -   [Parameters](#parameters-17)
+    -   [collectEdgeDefs](#collectedgedefs)
+        -   [Parameters](#parameters-18)
 -   [collectObjectPaths](#collectobjectpaths)
-    -   [Parameters](#parameters-18)
--   [flattenObject](#flattenobject)
     -   [Parameters](#parameters-19)
--   [expandObject](#expandobject)
+-   [flattenObject](#flattenobject)
     -   [Parameters](#parameters-20)
--   [pathValueToObject](#pathvaluetoobject)
+-   [expandObject](#expandobject)
     -   [Parameters](#parameters-21)
--   [extractNItems](#extractnitems)
+-   [pathValueToObject](#pathvaluetoobject)
     -   [Parameters](#parameters-22)
+-   [extractNItems](#extractnitems)
+    -   [Parameters](#parameters-23)
 
 ### getValueAtPathWithArraySupport
 
@@ -204,18 +207,23 @@ participates, and the node's definition.
 -   `dGraph`  
 -   `nodeDef`  
 
-#### getNodeDefPathPropertyNames
+#### getPathProps
 
-Properties on the nodeDef that should be treated like paths 
-to values in the graph. Allows checking for the existence of 
-dependent nodes and inferring whether a property value is a 
+Properties on the nodeDef that should be treated like paths
+to values in the graph. Allows checking for the existence of
+dependent nodes and inferring whether a property value is a
 path to a node or a literal value.
+
+Return an object with keys that are property names and values
+that describe how the property names should be handled/interpreted.
+Currently the only such option is hasSubproperties, which is used
+to help describe edge i/o. This is a wee messy.
 
 ### StaticDNode
 
 **Extends DNode**
 
-Initial value is its forever value. 
+Initial value is its forever value.
 
 Usage:
 
@@ -261,12 +269,12 @@ you could probably use an alias node instead.
 
 Dereference a property using a dynamic value path.
 
-Usage: 
+Usage:
 
-{ 
-  name: <node name>, 
-  type: "dereference", 
-  objectPath: &lt;path to `object` value to dereference>, 
+{
+  name: <node name>,
+  type: "dereference",
+  objectPath: &lt;path to `object` value to dereference>,
   propNamePath: &lt;path to `propName`, a string value>
 }
 
@@ -281,14 +289,14 @@ The value of the node will be the value of object[propName].
 
 **Extends DNode**
 
-Take the values of n input nodes and output a value based on 
+Take the values of n input nodes and output a value based on
 one of several predefined functions.
 
-Usage: 
+Usage:
 
-{ 
-  name: <node name>, 
-  type: "transform", 
+{
+  name: <node name>,
+  type: "transform",
   fn: &lt;fn name, a function exported from transform-fns.js>
   params: {
     &lt;...list of params, depending on fn>
@@ -328,7 +336,7 @@ node would not be serializable.
 **Extends DNode**
 
 Acts like a switch statement for other graph values, depending
-on the value of passed `test` value as compared to elements of the 
+on the value of passed `test` value as compared to elements of the
 passed `cases` array.
 
 Expects a one-to-one mapping from `cases` to `nodeNames`.
@@ -345,14 +353,14 @@ need a legit value to be "_default_").
 
 **Extends DNode**
 
-Create a subgraph node. The value of this node can depend on some of its 
+Create a subgraph node. The value of this node can depend on some of its
 supergraph's nodes and its supergraph's nodes can depend on the value
-of this node. Just be sure those are two separate sets of nodes: circular 
+of this node. Just be sure those are two separate sets of nodes: circular
 dependencies will prevent the graph from ever fulfilling.
 
-You can supply explicit inputs with an `inputs` property. Otherwise, the 
-subgraph will attempt to find its required inputs automatically 
-from its supergraph's nodes OR, barring that, from properties on its 
+You can supply explicit inputs with an `inputs` property. Otherwise, the
+subgraph will attempt to find its required inputs automatically
+from its supergraph's nodes OR, barring that, from properties on its
 supergraph's `inputs` node.
 
 Usage:
@@ -380,16 +388,16 @@ Don't we all ... don't we all.
 DGraph: Dependency Graph
 
 DGraph allows you to calculate values using dependency graphs
-(<https://en.wikipedia.org/wiki/Dependency_graph>), using a few built-in 
+(<https://en.wikipedia.org/wiki/Dependency_graph>), using a few built-in
 node types and built-in operations.
 
-All operations and nodes available can be found in dNodes.js, but the 
-basic operations (called "transforms" in the code) are things like 
-AND, OR, ADD, MULTIPLY, and so on. From a handful of primitive operations 
-and topologically-sorted evalutation trees, you can build up complicated 
+All operations and nodes available can be found in dNodes.js, but the
+basic operations (called "transforms" in the code) are things like
+AND, OR, ADD, MULTIPLY, and so on. From a handful of primitive operations
+and topologically-sorted evalutation trees, you can build up complicated
 business logic which can be serialized and composed.
 
-It uses reactive programming and works more or less like a spreadsheet, 
+It uses reactive programming and works more or less like a spreadsheet,
 where dependent cells are automatically re-evaluated when their inputs change.
 
 Basic use:
@@ -397,22 +405,22 @@ Basic use:
 1.  define a graph, `graphDef`, using JSON
 2.  build an in-memory graph via `const g = new DGraph(graphDef)`
 3.  run the graph by passing in your inputs: `g.run({ vehicle: {...}, user: {...} })`
-4.  `run` returns a promise which will fulfill with the calculated values, 
+4.  `run` returns a promise which will fulfill with the calculated values,
     derived from the inputs
 
 For now refer to the /scripts/d-graph/tests files to see examples of building
-and running a DGraph. One note: when you run a DGraph, it automatically creates 
+and running a DGraph. One note: when you run a DGraph, it automatically creates
 an `inputs` node that will contain all the values you provide. Refer to those
-values via a path, just like you would to any other node: `inputs.user.name.first`, 
-etc. This obviously means that you shouldn't name a node `inputs` in the graph 
+values via a path, just like you would to any other node: `inputs.user.name.first`,
+etc. This obviously means that you shouldn't name a node `inputs` in the graph
 definition itself.
 
-Two features make DGraph particularly useful for us: 
+Two features make DGraph particularly useful for us:
 
 1.  Inputs can be promises. When the promise fulfills, the graph updates all
     dependent values.
 2.  There is a `graph` node type, with which you can define subgraphs. The
-    subgraph can run asynchronously and its evaluated results can be referred to 
+    subgraph can run asynchronously and its evaluated results can be referred to
     just like any other value in the graph.
 
 \#1 means that we can use queries or other asynchronous operations as direct
@@ -422,22 +430,22 @@ inputs to the graph. For example:
       user: User.findOne({ _id: userId }).exec()
     })
 
-\#2 means that we can compose graphs and business logic. If, for example, the 
-only difference between two state's cost calculations is whether mileage is 
-taxed or not, we should be able to build a mostly re-usable cost graph and just 
+\#2 means that we can compose graphs and business logic. If, for example, the
+only difference between two state's cost calculations is whether mileage is
+taxed or not, we should be able to build a mostly re-usable cost graph and just
 plug in the tax calculation subgraph for each state.
 
 NB Current limitations:
 
--   Diagnostics are not very helpful. When things go wrong the graph can often 
+-   Diagnostics are not very helpful. When things go wrong the graph can often
     just stall in an unresolved state with little clue as to what didn't work out.
 
--   Subgraph nodes can depend on interior nodes of other subgraphs, BUT ONLY if there 
+-   Subgraph nodes can depend on interior nodes of other subgraphs, BUT ONLY if there
     no resulting cycle between the _subgraph_ nodes themselves. In other words if
     A and B are subgraphs, A.nodeInA can depend on B.nodeInB, or vice-versa, but
-    if you have dependencies in _both_ directions, the graph will never resolve, even 
-    if there is no logical cycle among individual nodes (that is, if they were all 
-    together in a single big graph). You can work around for now this by defining 
+    if you have dependencies in _both_ directions, the graph will never resolve, even
+    if there is no logical cycle among individual nodes (that is, if they were all
+    together in a single big graph). You can work around for now this by defining
     an alias of one of the values in the root graph and then referring to that.
 
 #### Parameters
@@ -447,6 +455,34 @@ NB Current limitations:
 -   `supergraph` **[DGraph](#dgraph)?** This graph's supergraph (used by graph nodes).
 -   `options` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)?** Options object.
 
+#### getDNode
+
+Return the DNode identified by `name` in this graph.
+
+If `searchAncestors` is true, also search in supergraphs.
+
+##### Parameters
+
+-   `name` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** 
+-   `searchAncestors` **[Boolean](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean)**  (optional, default `false`)
+
+#### getDNodes
+
+A list of all DNodes in this graph.
+
+#### getDEdges
+
+A list of all edges in this graph. An edge is shaped like:
+
+    {
+      srcNodeId: <source node name>,
+      srcPropName: <dependent property name in source>,
+      dstNodeId: <dest node name>,
+      dstValuePath: <path to depended-upon value in dest>
+    }
+
+`dstValuePath` may be undefined if the dest node value is atomic.
+
 #### setInputs
 
 ##### Parameters
@@ -455,10 +491,10 @@ NB Current limitations:
 
 #### srcFromPath
 
-Returns a pair with the nodeId split 
-out from the rest of the path: 
+Returns a pair with the nodeId split
+out from the rest of the path:
 
-{ 
+{
   nodeId: <node id>,
   valuePath: &lt;rest of the path, if any>
 }
@@ -489,17 +525,17 @@ collect the top-level property name required.
 #### collectExpectedInputPaths
 
 Traverse nodes and if any node depends on the `inputs` node,
-collect the full path of that dependency, except for `inputs.` at the 
+collect the full path of that dependency, except for `inputs.` at the
 beginning of the path (that part is assumed).
 
 Relies on DNode class advertising their property names that will refer
-to other nodes in `getNodeDefPathPropertyNames`.
+to other nodes in `getPathProps`.
 
 ##### Parameters
 
 -   `graphDef`  
 
-#### collectDependeeNodeIds
+#### collectEdgeDefs
 
 Collect names of nodes that this node refers to; ie, that it depends upon.
 
@@ -562,7 +598,7 @@ Not particularly well-tested.
 ### extractNItems
 
 Try to extract an array of values from arguments to the
-xxxN functions. 
+xxxN functions.
 
 Bit cheesy to accept all these variants.
 

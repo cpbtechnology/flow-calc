@@ -33,6 +33,6 @@ dGraph.run({
 		{ bar: 3 },
 		{ bar: 5 }
 	]
-}).then(result => {
+}).then((result) => {
 	console.log(result) // eslint-disable-line no-console
 })

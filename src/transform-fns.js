@@ -4,10 +4,10 @@ const { getValueAtPath } = require('./object-path-utils')
 /**
  * Try to extract an array of values from arguments to the
  * xxxN functions.
- * 
- * Bit cheesy to accept all these variants. 
- * 
- * @param {*} items 
+ *
+ * Bit cheesy to accept all these variants.
+ *
+ * @param {*} items
  */
 const extractNItems = (items) => {
 	let result = items
