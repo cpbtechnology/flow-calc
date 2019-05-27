@@ -513,7 +513,8 @@ class GraphDNode extends DNode {
 	 * Don't we all ... don't we all.
 	 */
 	waitForFulfillment() {
-		const dispose = autorun(() => {
+		let dispose
+		dispose = autorun(() => { // eslint-disable-line prefer-const
 			const args = this.getInputs()
 			const undefinedPaths = this.dGraph.getUndefinedPaths(args)
 			if (undefinedPaths.length === 0) {
