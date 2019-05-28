@@ -376,25 +376,28 @@ decorate(AsyncDNode, {
 })
 
 /**
- * Acts like a switch statement for other graph values, depending
+ * Acts like a switch statement for other graph nodes, depending
  * on the value of passed `test` value as compared to elements of the
  * passed `cases` array.
+ *
+ * Note at this time only the `test` value can be dynamic (ie, be
+ * a path to a node the value of which is resolved at runtime).
  *
  * Expects a one-to-one mapping from `cases` to `nodeNames`.
  *
  * A `_default_` case can be included (& hopefully no one would ever
- * need a legit value to be "_default_").
+ * need a legit value to be called "_default_").
  */
 class BranchDNode extends DNode {
 	constructor(dGraph, nodeDef) {
 		super(dGraph, nodeDef)
 		this.cases = _.cloneDeep(nodeDef.cases)
-		this.test = _.cloneDeep(nodeDef.test)
+		this.testValuePath = _.cloneDeep(nodeDef.test);
 		this.nodeNames = _.cloneDeep(nodeDef.nodeNames)
 	}
 
 	_switch(test, cases, values) {
-		const defaultIdx = cases.findIndex('_default_')
+		const defaultIdx = cases.indexOf('_default_')
 		let result
 		_.forEach(cases, (_case, i) => {
 			if (test === _case) {
@@ -408,15 +411,26 @@ class BranchDNode extends DNode {
 	}
 
 	get value() {
-		const nodeName = this._switch(this.test, this.cases, this.nodeNames)
-		return this.getGraphValueAt(nodeName)
+		let result
+
+		// has been converted to normalized param ...
+		const testValuePath = this.testValuePath[_.keys(this.testValuePath)[0]]
+
+		const testValue = this.getGraphValueAt(testValuePath)
+
+		if (!_.isUndefined(testValue)) {
+			const nodeNames = _.keys(this.nodeNames) // also converted ...
+			const branchedNodeName = this._switch(testValue, this.cases, nodeNames);
+			result = this.getGraphValueAt(branchedNodeName);
+		}
+		return result
 	}
 
 	static getPathProps() {
 		return {
+			test: {},
 			nodeNames: {}
 		}
-		// return ['nodeNames']
 	}
 }
 
