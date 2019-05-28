@@ -566,6 +566,8 @@ Collect edges, v -> w, read _v depends upon w_. Resulting edges are shaped:
   dstValuePath
 }
 
+Precondition for running this is that the graph and all subgraphs are _constructed_.
+
 ##### Parameters
 
 -   `dNode`  
