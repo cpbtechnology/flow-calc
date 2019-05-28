@@ -529,6 +529,7 @@ DGraph.collectExpectedInputPaths = (graphDef, recursive = false) => {
  *   dstValuePath
  * }
  *
+ * Precondition for running this is that the graph and all subgraphs are _constructed_.
  */
 DGraph.collectEdgeDefs = (dNode) => {
 	const result = []

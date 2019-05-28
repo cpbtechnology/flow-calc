@@ -455,6 +455,7 @@ class GraphDNode extends DNode {
 		}
 
 		this.collectionMode = nodeDef.collectionMode
+		this.latestUndefinedInputs = []
 
 		if (nodeDef.isTemplate) {
 			this._value = `Template Node ${this.name}`
@@ -516,8 +517,8 @@ class GraphDNode extends DNode {
 		let dispose
 		dispose = autorun(() => { // eslint-disable-line prefer-const
 			const args = this.getInputs()
-			const undefinedPaths = this.dGraph.getUndefinedPaths(args)
-			if (undefinedPaths.length === 0) {
+			this.latestUndefinedInputs = this.dGraph.getUndefinedPaths(args)
+			if (this.latestUndefinedInputs.length === 0) {
 				if (this.collectionMode === 'map') {
 					if (args.collection && _.isArray(args.collection)) {
 						this._runAsMap(args, dispose)
@@ -532,7 +533,7 @@ class GraphDNode extends DNode {
 				}
 			}
 			else if (this.dGraph.options.logUndefinedPaths) {
-				this.dGraph.logUndefinedPaths(undefinedPaths.map(p => `${this.name}.${p}`))
+				this.dGraph.logUndefinedPaths(this.latestUndefinedInputs.map(p => `${this.name}.${p}`))
 			}
 		})
 	}
