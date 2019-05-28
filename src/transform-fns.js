@@ -28,6 +28,7 @@ const addN = items => extractNItems(items).reduce((t, a) => t + a, 0)
 const andN = items => extractNItems(items).reduce((t, v) => !!t && !!v, true)
 const orN = items => extractNItems(items).reduce((t, v) => t || v, false)
 const concat = items => extractNItems(items).reduce((t, a) => t + a, '')
+const concatArrays = items => extractNItems(items).reduce((t, a) => t.concat(a), [])
 const filter = ({ collection, path, value }) => extractNItems(collection).filter(_filterFn({ path, value }))
 const filterNot = ({ collection, path, value }) => extractNItems(collection).filter(_filterNotFn({ path, value }))
 const find = ({ collection, propName, propValue }) => extractNItems(collection).find(item => item[propName] === propValue)
@@ -102,6 +103,7 @@ module.exports = {
 	ternary,
 	isNonEmptyString,
 	concat,
+	concatArrays,
 	filter,
 	filterNot,
 	find,

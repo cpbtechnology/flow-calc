@@ -524,7 +524,7 @@ class GraphDNode extends DNode {
 						this._runAsMap(args, dispose)
 					}
 					else {
-						throw new Error(`Graph node ${this.name}: if collectionMode is set to map, an input named \`collection\` must resolve to a single array.`)
+						throw new Error(`Graph node ${this.name}: if collectionMode is set to map, an input named \`collection\` must resolve to a single array. Passed: ${args.collection}`)
 					}
 				}
 				// TODO: collectionMode === 'reduce' ?
@@ -571,6 +571,40 @@ class GraphDNode extends DNode {
 	 *
 	 * - The mapping node must provide an `collection` property in the graph's `inputs`.
 	 * - Each item in the collection will be passed to the graph that is applied to each item as `item`.
+	 * - Remaining properties in `inputs` will be available as named.
+	 *
+	 * So in the supergraph definition:
+	 * ```
+	 * {
+	 *   "name": "mappingNodeName",
+	 *   "type": "graph",
+	 *   "collectionMode": "map",
+	 *   "graphDef": "graphToBeAppliedToEachItem"
+	 *   "inputs": {
+	 *     "collection": "nodeThatResolvesToArrayOfObjects",
+	 *     "otherArg": "someOtherArgsGoHere"
+	 *   }
+	 * }
+	 * ```
+	 *
+	 * Let's say the `nodeThatResolvesToArrayOfObjects` resolves to `[{ value: 5 }, { value: 20 }]`
+	 * and `someOtherArgsGoHere` resolves to the number `3`.
+	 *
+	 * Then `graphToBeAppliedToEachItem` could be defined as, for example:
+	 *
+	 * ```
+	 * [{
+	 *   "name": "result",
+	 *   "type": "transform",
+	 *   "fn": "mult",
+	 *   "params": {
+	 *     "amt": "inputs.item.value",
+	 *     "factor": "inputs.otherArg"
+	 *   }
+	 * }]
+	 * ```
+	 *
+	 * Then `mappingNodeName` should resolve to an array like `[{ result: 15 }, { result: 60 }]`.
 	 *
 	 * @param {*} args
 	 * @param {*} dispose
@@ -578,7 +612,7 @@ class GraphDNode extends DNode {
 	_runAsMap(args, dispose) {
 		const { collection, ...itemArgs } = args
 		if (!_.isArray(collection)) {
-			throw new Error(`A \`collectionMode: map\` node must define a \`collection\` input that resolves to an array.`)
+			throw new Error(`A \`collectionMode: map\` node must define a \`collection\` input that resolves to an array. Passed: ${collection}`)
 		}
 		this.subgraphs = []
 		const promises = []
@@ -593,7 +627,7 @@ class GraphDNode extends DNode {
 				}
 			)
 			this.subgraphs.push(subgraph)
-			promises.push(subgraph.run({ item, args: itemArgs }))
+			promises.push(subgraph.run({ item, ...itemArgs }))
 		})
 
 		Promise.all(promises).then((results) => {
