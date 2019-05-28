@@ -337,14 +337,17 @@ node would not be serializable.
 
 **Extends DNode**
 
-Acts like a switch statement for other graph values, depending
+Acts like a switch statement for other graph nodes, depending
 on the value of passed `test` value as compared to elements of the
 passed `cases` array.
+
+Note at this time only the `test` value can be dynamic (ie, be
+a path to a node the value of which is resolved at runtime).
 
 Expects a one-to-one mapping from `cases` to `nodeNames`.
 
 A `_default_` case can be included (& hopefully no one would ever
-need a legit value to be "_default_").
+need a legit value to be called "_default_").
 
 #### Parameters
 
