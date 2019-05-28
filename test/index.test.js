@@ -1,7 +1,7 @@
 /* eslint-disable */
 const DGraph = require('../src/index')
 
-// TODO: actual tests ...
+// TODO: actual tests ... these are currently just for visual inspection in console ... 
 
 test('edges look ok', () => {
   const graphDefinition = [
@@ -40,7 +40,47 @@ test('recursive input path collection', () => {
   console.log(DGraph.collectExpectedInputPaths(graphDefinition, true))
 })
 
+test('events are fired', () => {
+  const graphDef = [
+    { name: 'staticNode', type: 'static', value: 'hello, ' },
+    { name: 'aliasNode', type: 'alias', mirror: 'inputs.stringValue' },
+    { name: 'concatExample', type: 'transform', fn: 'concat', params: ['staticNode', 'inputs.stringValue'] },
+    { name: 'multiplyExample', type: 'transform', fn: 'mult', params: { amt: 'inputs.numberValue', factor: 3 } }
+  ]
+  const dGraph = new DGraph(graphDef)
+  dGraph.on('stepped', (stepState) => {
+    console.log('event: stepped', stepState.undefinedPaths)
+  })
+  dGraph.on('resolved', state => {
+    console.log('event: resolved', { state })
+  })
+  return dGraph.isConnected.then(() => {
+    const inputs = {
+      stringValue: new Promise(r => setTimeout(() => r('world'), 500)),
+      numberValue: 4
+    }
+    return dGraph.run(inputs)
+  })
+})
 
+test('getState(true) includes invisible nodes', () => {
+  const graphDef = [
+    { name: 'staticNode', type: 'static', value: 'hello, ' },
+    { name: 'aliasNode', type: 'alias', mirror: 'inputs.stringValue', isHidden: true },
+    { name: 'concatExample', type: 'transform', fn: 'concat', params: ['staticNode', 'inputs.stringValue'] },
+    { name: 'multiplyExample', type: 'transform', fn: 'mult', params: { amt: 'inputs.numberValue', factor: 3 } }
+  ]
+  const dGraph = new DGraph(graphDef)
+  return dGraph.isConnected.then(() => {
+    const inputs = {
+      stringValue: new Promise(r => setTimeout(() => r('world'), 500)),
+      numberValue: 4
+    }
+    return dGraph.run(inputs).then(() => {
+      console.log('is aliasNode visible?', dGraph.getState(true))
+    })
+  })
+})
 
 /*
 import { expect } from 'chai'

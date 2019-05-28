@@ -3,6 +3,7 @@ const graphlib = require('graphlib')
 const _ = require('lodash')
 const { flattenObject } = require('./object-path-utils')
 const dNodeClasses = require('./d-nodes')
+const EventEmitter = require('./EventEmitter')
 
 let nGraphs = 0
 
@@ -78,9 +79,9 @@ let nGraphs = 0
  * @param {DGraph} [supergraph] This graph's supergraph (used by graph nodes).
  * @param {Object} [options] Options object.
  */
-class DGraph {
+class DGraph extends EventEmitter {
 	constructor(graphDefinition, name, supergraph, options) {
-
+		super()
 		if (!graphDefinition) {
 			throw new Error('No graph definition was supplied.')
 		}
@@ -231,6 +232,7 @@ class DGraph {
 
 		// this.log(`[${this.name}] is constructed`)
 		resolveGraphIsConstructed()
+		this.trigger('constructed')
 
 		Promise.all(subgraphsConstructedPromises).then(() => {
 			// TODO: this seems not to be doing quite the right thing yet.
@@ -241,6 +243,7 @@ class DGraph {
 				}
 			}
 			resolveGraphIsConnected()
+			this.trigger('connected')
 		})
 	}
 
@@ -249,8 +252,9 @@ class DGraph {
 			const flattened = flattenObject(obj)
 			return _.keys(flattened).filter(k => _.isUndefined(flattened[k]) || _.isNaN(flattened[k]))
 		}
-		return obj ? collectUndefinedPathsInObject(obj) : collectUndefinedPathsInObject(this.getState())
+		return obj ? collectUndefinedPathsInObject(obj) : collectUndefinedPathsInObject(this.getState(true))
 	}
+
 
 	shouldIncludeNodeValue(dNode) {
 		let result = !dNode.name.startsWith('#') && (!(dNode instanceof dNodeClasses.inputs) || this.options.echoInputs)
@@ -258,14 +262,14 @@ class DGraph {
 		return result
 	}
 
-	getState() {
+	getState(includeInvisible = false) {
 		const nodeValues = {}
 		try {
 			this._graph.nodes().forEach((nodeId) => {
 				const dNode = this._graph.node(nodeId)
 				const { name } = dNode
 				const { value } = dNode
-				if (dNode.isVisibleInGraphState) {
+				if (dNode.isVisibleInGraphState || includeInvisible) {
 					nodeValues[name] = toJS(value)
 				}
 			})
@@ -307,11 +311,16 @@ class DGraph {
 
 					if (undefinedPaths.length === 0) {
 						resolve(state)
+						this.trigger('resolved', state)
 						if (dispose) {
 							dispose()
 						}
 					}
 					else {
+						this.trigger('stepped', {
+							state,
+							undefinedPaths
+						})
 						if (this.options.logUndefinedPaths) {
 							this.logUndefinedPaths(undefinedPaths)
 						}
@@ -320,6 +329,7 @@ class DGraph {
 				catch (error) {
 					this.log(`Error caught reading nodes from [${this.name}]. ${error}.`)
 					this.log(error.stack)
+					this.trigger('error', error)
 					reject(error)
 					if (dispose) {
 						if (dispose) {

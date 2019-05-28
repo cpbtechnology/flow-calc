@@ -538,7 +538,7 @@ class GraphDNode extends DNode {
 	}
 
 	_runOnObj(args, dispose) {
-		const subgraph = new DGraph(
+		this.subgraph = new DGraph(
 			this.graphDef,
 			`${this.dGraph.name}.${this.name}`,
 			this.dGraph,
@@ -547,7 +547,7 @@ class GraphDNode extends DNode {
 				depth: this.dGraph.options.depth + 1
 			}
 		)
-		subgraph.run(args).then((result) => {
+		this.subgraph.run(args).then((result) => {
 			if (this.dGraph.options.logUndefinedPaths) {
 				this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
 			}
@@ -565,13 +565,23 @@ class GraphDNode extends DNode {
 		})
 	}
 
+	/**
+	 * Conventions for mapping a template graph over a collection of items:
+	 *
+	 * - The mapping node must provide an `collection` property in the graph's `inputs`.
+	 * - Each item in the collection will be passed to the graph that is applied to each item as `item`.
+	 *
+	 * @param {*} args
+	 * @param {*} dispose
+	 */
 	_runAsMap(args, dispose) {
-		const { collection } = args
+		const { collection, ...itemArgs } = args
 		if (!_.isArray(collection)) {
-			throw new Error(`A \`collectionMode: map\` node must define a \`collection\` param that resolves to an array.`)
+			throw new Error(`A \`collectionMode: map\` node must define a \`collection\` input that resolves to an array.`)
 		}
-		args = _.omit(args, 'collection') // eslint-disable-line no-param-reassign
-		const promises = collection.map((item, i) => {
+		this.subgraphs = []
+		const promises = []
+		collection.forEach((item, i) => {
 			const subgraph = new DGraph(
 				this.graphDef,
 				`${this.dGraph.name}.${this.name}[${i}]`,
@@ -581,11 +591,10 @@ class GraphDNode extends DNode {
 					depth: this.dGraph.options.depth + 1
 				}
 			)
-			return subgraph.run({
-				item,
-				args
-			})
+			this.subgraphs.push(subgraph)
+			promises.push(subgraph.run({ item, args: itemArgs }))
 		})
+
 		Promise.all(promises).then((results) => {
 			if (this.dGraph.options.logUndefinedPaths) {
 				this.log(`[log-undefined-paths] Subgraph '${this.name}' resolved.`)
