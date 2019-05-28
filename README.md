@@ -391,6 +391,37 @@ Conventions for mapping a template graph over a collection of items:
 
 -   The mapping node must provide an `collection` property in the graph's `inputs`.
 -   Each item in the collection will be passed to the graph that is applied to each item as `item`.
+-   Remaining properties in `inputs` will be available as named.
+
+So in the supergraph definition:
+
+    {
+      "name": "mappingNodeName",
+      "type": "graph",
+      "collectionMode": "map",
+      "graphDef": "graphToBeAppliedToEachItem"
+      "inputs": {
+        "collection": "nodeThatResolvesToArrayOfObjects",
+        "otherArg": "someOtherArgsGoHere"
+      }
+    }
+
+Let's say the `nodeThatResolvesToArrayOfObjects` resolves to `[{ value: 5 }, { value: 20 }]`
+and `someOtherArgsGoHere` resolves to the number `3`.
+
+Then `graphToBeAppliedToEachItem` could be defined as, for example:
+
+    [{
+      "name": "result",
+      "type": "transform",
+      "fn": "mult",
+      "params": {
+        "amt": "inputs.item.value",
+        "factor": "inputs.otherArg"
+      }
+    }]
+
+Then `mappingNodeName` should resolve to an array like `[{ result: 15 }, { result: 60 }]`.
 
 ##### Parameters
 
