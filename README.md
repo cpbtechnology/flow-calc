@@ -156,34 +156,36 @@ Note that API below is auto-generated and at this time is not checked for accura
 -   [GraphDNode](#graphdnode)
     -   [Parameters](#parameters-10)
     -   [waitForFulfillment](#waitforfulfillment)
+    -   [\_runAsMap](#_runasmap)
+        -   [Parameters](#parameters-11)
 -   [DGraph](#dgraph)
-    -   [Parameters](#parameters-11)
+    -   [Parameters](#parameters-12)
     -   [getDNode](#getdnode)
-        -   [Parameters](#parameters-12)
+        -   [Parameters](#parameters-13)
     -   [getDNodes](#getdnodes)
     -   [getDEdges](#getdedges)
     -   [setInputs](#setinputs)
-        -   [Parameters](#parameters-13)
-    -   [srcFromPath](#srcfrompath)
         -   [Parameters](#parameters-14)
-    -   [normalizePathDef](#normalizepathdef)
+    -   [srcFromPath](#srcfrompath)
         -   [Parameters](#parameters-15)
-    -   [collectExpectedInputNames](#collectexpectedinputnames)
+    -   [normalizePathDef](#normalizepathdef)
         -   [Parameters](#parameters-16)
-    -   [collectExpectedInputPaths](#collectexpectedinputpaths)
+    -   [collectExpectedInputNames](#collectexpectedinputnames)
         -   [Parameters](#parameters-17)
-    -   [collectEdgeDefs](#collectedgedefs)
+    -   [collectExpectedInputPaths](#collectexpectedinputpaths)
         -   [Parameters](#parameters-18)
+    -   [collectEdgeDefs](#collectedgedefs)
+        -   [Parameters](#parameters-19)
 -   [collectObjectPaths](#collectobjectpaths)
-    -   [Parameters](#parameters-19)
--   [flattenObject](#flattenobject)
     -   [Parameters](#parameters-20)
--   [expandObject](#expandobject)
+-   [flattenObject](#flattenobject)
     -   [Parameters](#parameters-21)
--   [pathValueToObject](#pathvaluetoobject)
+-   [expandObject](#expandobject)
     -   [Parameters](#parameters-22)
--   [extractNItems](#extractnitems)
+-   [pathValueToObject](#pathvaluetoobject)
     -   [Parameters](#parameters-23)
+-   [extractNItems](#extractnitems)
+    -   [Parameters](#parameters-24)
 
 ### getValueAtPathWithArraySupport
 
@@ -383,7 +385,21 @@ Usage:
 
 Don't we all ... don't we all.
 
+#### \_runAsMap
+
+Conventions for mapping a template graph over a collection of items:
+
+-   The mapping node must provide an `collection` property in the graph's `inputs`.
+-   Each item in the collection will be passed to the graph that is applied to each item as `item`.
+
+##### Parameters
+
+-   `args` **any** 
+-   `dispose` **any** 
+
 ### DGraph
+
+**Extends EventEmitter**
 
 DGraph: Dependency Graph
 
