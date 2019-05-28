@@ -239,7 +239,7 @@ class DGraph extends EventEmitter {
 			for (const dNode of dNodes) {
 				const edges = DGraph.collectEdgeDefs(dNode)
 				for (const edge of edges) {
-					this._graph.setEdge(edge.srcNodeId, edge.dstNodeId, edge)
+					this._graph.setEdge({ v: edge.srcNodeId, w: edge.dstNodeId, name: edge.label }, edge)
 				}
 			}
 			resolveGraphIsConnected()
@@ -554,6 +554,7 @@ DGraph.collectEdgeDefs = (dNode) => {
 				srcPropName = pathKeys[i]
 			}
 			result.push({
+				label: `${dNode.name}.${srcPropName}->${src.nodeId}.${src.valuePath}`,
 				srcNodeId: dNode.name,
 				srcPropName,
 				dstNodeId: src.nodeId,

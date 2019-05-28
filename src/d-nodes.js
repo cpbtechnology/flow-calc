@@ -38,7 +38,7 @@ const getValueAtPathWithArraySupport = (obj, path) => {
 				// console.log('---')
 				// console.log({ path, pathToArray, obj, array })
 				// console.log('---')
-				throw new Error(`Value at '${pathToArray}' is not an array.`)
+				throw new Error(`getValueAtPathWithArraySupport: Value at '${pathToArray}' is not an array. Passed path '${path}', obj ${obj}`)
 			}
 			else {
 				result = array.map((item) => {
@@ -69,6 +69,7 @@ class DNode {
 		this.originalNodeDef = _.cloneDeep(nodeDef)
 		this.dGraph = dGraph
 		this.srcFromPath = this.dGraph.srcFromPath
+		this.undefinedDependencies = [];
 		this.comments = this.originalNodeDef.comments && this.originalNodeDef.comments.length ? this.originalNodeDef.comments : null
 	}
 
@@ -311,7 +312,7 @@ class TransformDNode extends DNode {
 
 	get value() {
 		const args = _.mapValues(this.paramSrcPaths, srcPath => this.getGraphValueAt(srcPath))
-		const undefinedArgs = this.dGraph.getUndefinedPaths(args)
+		this.undefinedDependencies = this.dGraph.getUndefinedPaths(args)
 
 		// helpful debugging for when there are mystery undefined nodes:
 		//
@@ -319,7 +320,7 @@ class TransformDNode extends DNode {
 		// 	console.log('nonDayrateDiscounts', args, undefinedArgs)
 		// }
 
-		return undefinedArgs.length === 0 ? this.fn(args) : undefined
+		return this.undefinedDependencies.length === 0 ? this.fn(args) : undefined
 	}
 
 	static getPathProps() {
@@ -455,7 +456,6 @@ class GraphDNode extends DNode {
 		}
 
 		this.collectionMode = nodeDef.collectionMode
-		this.latestUndefinedInputs = []
 
 		if (nodeDef.isTemplate) {
 			this._value = `Template Node ${this.name}`
@@ -517,8 +517,8 @@ class GraphDNode extends DNode {
 		let dispose
 		dispose = autorun(() => { // eslint-disable-line prefer-const
 			const args = this.getInputs()
-			this.latestUndefinedInputs = this.dGraph.getUndefinedPaths(args)
-			if (this.latestUndefinedInputs.length === 0) {
+			this.undefinedDependencies = this.dGraph.getUndefinedPaths(args)
+			if (this.undefinedDependencies.length === 0) {
 				if (this.collectionMode === 'map') {
 					if (args.collection && _.isArray(args.collection)) {
 						this._runAsMap(args, dispose)
@@ -533,7 +533,7 @@ class GraphDNode extends DNode {
 				}
 			}
 			else if (this.dGraph.options.logUndefinedPaths) {
-				this.dGraph.logUndefinedPaths(this.latestUndefinedInputs.map(p => `${this.name}.${p}`))
+				this.dGraph.logUndefinedPaths(this.undefinedDependencies.map(p => `${this.name}.${p}`))
 			}
 		})
 	}
