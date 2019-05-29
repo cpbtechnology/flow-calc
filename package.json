@@ -1,6 +1,6 @@
 {
   "name": "flow-calc",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Run and serialize business logic and calculations using dependency graphs and reactive/flow programming.",
   "license": "MIT",
   "repository": "cpbtechnology/flow-calc",
