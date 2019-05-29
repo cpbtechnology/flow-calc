@@ -82,6 +82,30 @@ test('getState(true) includes invisible nodes', () => {
   })
 })
 
+test('vector op', () => {
+  const graphDef = [
+    { name: 'collectionA', type: 'static', value: [1, 2, 3, 4] },
+    { name: 'collectionB', type: 'static', value: [5, 5, 5, 5] },
+  ]
+  for (const op of ['mult', 'add', 'sub', 'div']) {
+    graphDef.push({ 
+      name: `${op}Result`, 
+      type: 'transform', 
+      fn: 'vectorOp',
+      params: {
+        collectionA: 'collectionA',
+        collectionB: 'collectionB',
+        op: op
+      }
+    })
+  }
+
+  const dGraph = new DGraph(graphDef)
+  return dGraph.run({}).then(results => {
+    console.log(results)
+  })
+})
+
 /*
 import { expect } from 'chai'
 import basic from './cases/basic'

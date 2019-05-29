@@ -20,6 +20,19 @@ const extractNItems = (items) => {
 	return result
 }
 
+// yuck :(
+const vectorOpFnArgs = (fn, a, b) => {
+	let result = { a, b }
+	if (['addFactor', 'subFactor', 'mult'].includes(fn)) {
+		result = { amt: a, factor: b }
+	}
+	else if (fn === 'div') {
+		result = { num: a, dem: b }
+	}
+	return result
+}
+
+
 // optionally accept a value; if undefined assume `true`
 const _filterFn = ({ path, value }) => (item => !!(getValueAtPath(item, path) === (_.isUndefined(value) ? true : value)))
 const _filterNotFn = ({ path, value }) => (item => !(getValueAtPath(item, path) === (_.isUndefined(value) ? true : value)))
@@ -68,6 +81,24 @@ const map = ({ collection, fn, params }) => collection.map((item) => {
 	return module.exports[fn](args)
 })
 
+const vectorOp = ({ collectionA, collectionB, op }) => {
+	const result = []
+	const cA = extractNItems(collectionA)
+	const cB = extractNItems(collectionB)
+	if (cA.length !== cB.length) {
+		throw new Error(`vectorOp error: collections must be equal in length. Got a: ${cA.length}, b: ${cB.length}.`)
+	}
+	if (!(op in module.exports)) {
+		throw new Error(`vectorOp error: op '${op}' not found`)
+	}
+	cA.forEach((a, i) => {
+		const b = cB[i]
+		const args = vectorOpFnArgs(op, a, b)
+		result.push(module.exports[op](args))
+	})
+	return result
+}
+
 const pick = ({ src, propNames }) => _.pick(src, propNames)
 const omit = ({ src, propNames }) => _.omit(src, propNames)
 const merge = ({ a, b }) => _.merge({}, a, b)
@@ -108,6 +139,7 @@ module.exports = {
 	filterNot,
 	find,
 	map,
+	vectorOp,
 	pick,
 	omit,
 	merge,

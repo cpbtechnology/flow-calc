@@ -1,6 +1,6 @@
 # flow-calc
 
-Serialize and run complex business logic or calculations using a dependency graph/flow programming. Very work-in-progress, used internally on a project. Uses mobx and graphlib.
+Serialize and run complex business logic or calculations using a dependency graph/flow programming. Very work-in-progress, used internally on a project. Uses [mobx](https://github.com/mobxjs/mobx/) and [graphlib](https://github.com/dagrejs/graphlib/).
 
 **Very work-in-progress. Use at your own peril, no support is currently offered, etc.**
 
@@ -58,38 +58,52 @@ Output:
 
 TODO: fill this out.
 
-"Paths" are dot-separated paths to node values. Every graph has a special `inputs` node wherein you can find inputs passed to the graph, either from the first argument to the `run` function or as pass-throughs or nodes from supergraphs.
+Some nomenclature. A _graph definition_, often shortened to `graphDef` is a JSON array describing nodes and values, transforms on values, and dependencies among nodes/node values. A _graph_ is an in-memory representation of a graph definition, with:
+
+- live dependency tracking and updating, courtesy of [mobx](https://github.com/mobxjs/mobx/)
+- nodes and edges in an instance of a [graphlib Graph](https://github.com/dagrejs/graphlib/wiki/API-Reference)
+
+Nodes have a name. And/or an id. The code is currently prettly sloppy about this. They're the same thing and the name/id must be unique within the graph.
+
+Nodes also have a _value_. The value is `undefined` until all of its dependencies have been resolved. Once resolved, the value can be anything: an atomic built-in, an object, or an array.
+
+All graphs accept _inputs_. All _transform_ nodes accept _params_. Other note types will have specific properties, depending. For example an `alias` node expects a `mirror` property. For now the best documentation is the source.
+
+Every graph has a special `inputs` node wherein you can find the inputs passed to the graph, either from the first argument to the `run` function or as pass-throughs or nodes from supergraphs. 
+
+_Paths_ are dot-separated paths to nodes and/or node values (once the node has resolved to, for example, an object). 
 
 The wildcard `*` character can be used in a path for simple property mapping on a collection. For example, given:
-
+```
     {
         things: [
             { name: 'foo', amount: 4 },
             { name: 'bar', amount: 2 }
         ]
     }
-
-The path `things.*.amount` would resolve to the array `[4, 2]`. Only one wildcard per path is supported.
-
-## `run` command line util
-
-Enables running graph compositions from command line.
+```
+The path `things.*.amount` would resolve to the array `[4, 2]`. Only one wildcard per path is supported. Also see caveat below re: mapping over collections in the `inputs` node (you can't, at the moment).
 
 # Features
 
 -   Inputs can be promises (or any then-able).
 -   Nodes in a graph can be graphs themselves.
 -   Nodes can find their `inputs` (for graphs) or `params` (for transforms) by name implicitly when the supplied paths resolve to nodes in the current graph, nodes in the supergraph, or inputs to the supergraph. If you supply a string value as a param or input and it does not resolve to a node name, the graph will interpret it as a literal value.
--   Template subgraphs (`isTemplate: true`) can be used multiple times by explicitly supplying `inputs`.
--   Set `collectionMode` on a subgraph and pass a path to a `collection` that resolves to an array. Currently only `map` is supported: the subgraph will be applied to every item in the collection and the node's value will be a mapped array.
--   Set `isHidden: true` on a node to hide its value from the output of `DGraph.run`.
+-   A template subgraph (`isTemplate: true`) can be used multiple times by explicitly supplying different `inputs` to each instance.
+-   Set `collectionMode` on a subgraph and pass a path to a `collection` that resolves to an array. Currently only `map` is supported: the subgraph will be applied to every item in the collection and the node's value will be the resulting mapped array.
+-   Set `isHidden: true` on a node to hide its value from the output of `DGraph.run` and `DGraph.getState`.
 
 # Caveats
 
 -   Diagnostics are really pretty bad right now. There is no checking for cycles. Passing the option `{ logUndefinedPaths: true }` to the `run` function will at least log which nodes remain unresolved as the graph runs. But the dependencies among those nodes is not apparent, so you have to either figure it out in your head or do some trial and error debugging. 
 -   Currently subgraphs resolve as a whole unit with respect to the containing graph. Individual nodes within the subgraph will not be visible until the entire subgraph resolves. This means that a subgraph `A`'s nodes can depend on a sibling subgraph `B`'s nodes _as long as_ there is not any dependency back from `B.someNode` to `A.someOtherNode`. This is true even if there is no _logical_ circular dependency among those nodes. You can use an `alias` node in the shared parent supergraph to get around this limitation.
+-   Nodes currently can't map over arrays (with the wildcard `*`) in the `inputs` node of a graph. In other words a path like `inputs.someCollection.*.property` will fail. You can make an alias of the array path and then map over that. In this case the alias node's `mirror` value would be `inputs.someCollection` and the original node could then refer to the alias: `aliasOfInputsCollection.*.property`.
 -   Paths to array indices (eg `some.collection.45`) probably works but hasn't been tested.
 -   This package was put together using [nod](https://github.com/diegohaz/nod#install) and, as of this writing, minimal effort to follow best practices or testing. The commands in the Commands section may or may not do the right thing ...
+
+## `run` command line util
+
+Enables running graph compositions from command line.
 
 # Node Types
 
