@@ -1,3 +1,7 @@
+## [0.5.4](https://github.com/cpbtechnology/flow-calc/compare/v0.5.3...v0.5.4) (2019-06-08)
+
+
+
 ## [0.5.3](https://github.com/cpbtechnology/flow-calc/compare/v0.5.2...v0.5.3) (2019-05-29)
 
 
