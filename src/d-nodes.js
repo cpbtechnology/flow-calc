@@ -265,7 +265,7 @@ class DereferenceDNode extends DNode {
 			// node to `null` instead of `undefined` so that this node does not appear to be
 			// unresolved. use a `ternary` transform node to distinguish this case and provide a
 			// default value.
-			return object[propName] ? object[propName] : null
+			return !_.isUndefined(object[propName]) ? object[propName] : null
 		}
 		return undefined
 	}

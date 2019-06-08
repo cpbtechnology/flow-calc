@@ -506,7 +506,7 @@ DGraph.collectExpectedInputPaths = (graphDef, recursive = false) => {
 		}
 
 		// Note this will currently not capture inputs in templates.
-		if (recursive && nodeDef.type === 'graph' && nodeDef.graphDef) {
+		if (recursive && nodeDef.type === 'graph' && _.isArray(nodeDef.graphDef)) {
 			let subgraphInputs = DGraph.collectExpectedInputPaths(nodeDef.graphDef, true)
 			// a subgraph's inputs implicitly includes all nodes in the supergraph.
 			// so, with respect to this graph's expected inputs, filter those subgraph
@@ -568,5 +568,7 @@ DGraph.collectEdgeDefs = (dNode) => {
 
 class SyncRunTimeout extends Error {}
 DGraph.SyncRunTimeout = SyncRunTimeout
+
+DGraph.version = '0.5.4'
 
 module.exports = DGraph
