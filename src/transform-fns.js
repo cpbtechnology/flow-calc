@@ -44,6 +44,7 @@ const concat = items => extractNItems(items).reduce((t, a) => t + a, '')
 const concatArrays = items => extractNItems(items).reduce((t, a) => t.concat(a), [])
 const filter = ({ collection, path, value }) => extractNItems(collection).filter(_filterFn({ path, value }))
 const filterNot = ({ collection, path, value }) => extractNItems(collection).filter(_filterNotFn({ path, value }))
+// TODO: When a node running find returns null it should not break the flow.
 const find = ({ collection, propName, propValue }) => extractNItems(collection).find(item => item[propName] === propValue)
 
 const not = ({ item }) => _.isBoolean(item) && !item
@@ -75,6 +76,7 @@ const roundCurrency = ({ amt }) => {
 }
 const includes = ({ item, isIncludedIn }) => isIncludedIn.includes(item)
 const isNonEmptyString = ({ item }) => !!item && _.isString(item) && item.trim().length > 0
+const isNull = ({ item }) => _.isNull(item)
 
 const map = ({ collection, fn, params }) => collection.map((item) => {
 	const args = _.mapValues(params, localPath => getValueAtPath(item, localPath))
@@ -131,6 +133,7 @@ module.exports = {
 	andN,
 	orN,
 	not,
+	isNull,
 	ternary,
 	isNonEmptyString,
 	concat,
