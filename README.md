@@ -200,6 +200,8 @@ Note that API below is auto-generated and at this time is not checked for accura
     -   [Parameters](#parameters-23)
 -   [extractNItems](#extractnitems)
     -   [Parameters](#parameters-24)
+-   [applyDiscounts](#applydiscounts)
+    -   [Parameters](#parameters-25)
 
 ### getValueAtPathWithArraySupport
 
@@ -680,6 +682,17 @@ Bit cheesy to accept all these variants.
 #### Parameters
 
 -   `items` **any** 
+
+### applyDiscounts
+
+Applies a given list of discounts discounts to a given borrowerDayrate.
+
+#### Parameters
+
+-   `$0` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)** 
+    -   `$0.discounts`   (optional, default `[]`)
+    -   `$0.borrowerDayrate`  
+    -   `$0.lenderDayrate`  
 
 ## License
 

@@ -109,6 +109,60 @@ const box = ({ value, propName }) => ({ [propName]: value })
 // note currently can't get path values for a nested array of paths, so can only add one prop at a time.
 const addProp = ({ src, propName, propValue }) => _.merge({}, src, { [propName]: propValue })
 
+/** Applies a given list of discounts discounts to a given borrowerDayrate. */
+const applyDiscounts = ({ discounts = [], borrowerDayrate, lenderDayrate }) => {
+  let appliedBorrowerDiscountAmount = 0
+  let appliedLenderReductionAmount = 0
+  const appliedDiscounts = []
+  let newBorrowerDayRate = borrowerDayrate
+  let newLenderDayRate = lenderDayrate
+
+  if (!_.isArray(discounts)) throw new Error('"discounts" must be a an array.')
+  if (!_.isNumber(borrowerDayrate)) throw new Error('"borrowerDayrate" must be a number.')
+  if (!_.isNumber(lenderDayrate)) throw new Error('"lenderDayrate" must be a number.')
+
+  // if the borrowerDayrate or the lenderDayrate are already 0 we can't apply discounts.
+  if (borrowerDayrate <= 0 || lenderDayrate <= 0) {
+    return { appliedBorrowerDiscountAmount, appliedLenderReductionAmount, appliedDiscounts, newBorrowerDayRate, newLenderDayRate }
+  }
+
+	for (let i = 0; i < discounts.length; i++) {
+		const discount = discounts[i];
+		const newBorrowerDayratePostDiscount = newBorrowerDayRate - discount.amount
+
+		// Compute the amount absorbed by by the lender. If the absorption amount is 1, the entire discount is absorbed by the lender.
+		// TODO: Currently this is only working in the borrower context but it should be bidirectional.
+		// In other words this will not work for promotions where the targetParty is the lender.
+		const lenderReductionAmount =		discount.amount * discount.amtAbsorbedByOtherParty
+		const newLenderDayRatePostDiscount = newLenderDayRate - lenderReductionAmount
+
+    if (newBorrowerDayratePostDiscount >= 0 && newLenderDayRatePostDiscount >= 0) {
+      appliedDiscounts.push(discount)
+      appliedBorrowerDiscountAmount += discount.amount
+			appliedLenderReductionAmount += lenderReductionAmount
+      newBorrowerDayRate = newBorrowerDayratePostDiscount
+			newLenderDayRate = newLenderDayRatePostDiscount
+      if (newBorrowerDayratePostDiscount === 0 || newLenderDayRatePostDiscount === 0) {
+        break
+      }
+    } else {
+			/*
+			// TODO: There might be some edge cases when applying a discount partially. So we'll add this in a next iteration.
+      // If we get a negative value after deducting the discount then we want to apply the discount partially until it gets to zero
+      // and update the discount object item in the applied discount list to reflect the actual applied amount deducted.
+      appliedDiscounts.push({ ...discount, amount: newBorrowerDayRate })
+      appliedBorrowerDiscountAmount += newBorrowerDayRate
+			appliedLenderReductionAmount += newLenderDayRate
+			newBorrowerDayRate = newBorrowerDayratePostDiscount < 0 ? 0 : newBorrowerDayratePostDiscount
+			newLenderDayRate = newLenderDayRatePostDiscount < 0 ? 0 : newLenderDayRatePostDiscount
+			*/
+      break
+    }
+	}
+
+	return { appliedBorrowerDiscountAmount, appliedLenderReductionAmount, appliedDiscounts, newBorrowerDayRate, newLenderDayRate }
+}
+
 module.exports = {
 	addN,
 	addFactor,
@@ -147,5 +201,6 @@ module.exports = {
 	omit,
 	merge,
 	box,
-	addProp
+	addProp,
+	applyDiscounts
 }
