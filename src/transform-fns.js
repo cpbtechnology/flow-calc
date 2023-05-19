@@ -116,6 +116,7 @@ const applyDiscounts = ({ discounts = [], borrowerDayrate, lenderDayrate }) => {
   const appliedDiscounts = []
   let newBorrowerDayRate = borrowerDayrate
   let newLenderDayRate = lenderDayrate
+	discounts.sort((d1, d2) => d1.amount - d2.amount)
 
   if (!_.isArray(discounts)) throw new Error('"discounts" must be a an array.')
   if (!_.isNumber(borrowerDayrate)) throw new Error('"borrowerDayrate" must be a number.')
